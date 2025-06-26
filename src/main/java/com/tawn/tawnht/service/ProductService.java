@@ -57,19 +57,16 @@ public class ProductService {
 //            throw new AppException(ErrorCode.SLUG_ALREADY_EXISTS);
 //        }
 
-        // Kiểm tra xác thực và quyền
         String email = SecurityUtils.getCurrentUserLogin()
                 .orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // Tìm category và seller
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
         Seller seller = sellerRepository.findSellerByUser(user.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.SELLER_NOT_FOUND));
 
-        // Tạo product
         Product product = Product.builder()
                 .createdAt(LocalDateTime.now())
                 .name(request.getName())
@@ -83,7 +80,6 @@ public class ProductService {
                 .warrantyInfo(request.getWarrantyInfo())
                 .build();
 
-        // Tạo và gán product images
         Set<ProductImage> productImages = new HashSet<>();
         for (int i = 0; i < request.getImages().size(); i++) {
             ProductImage productImage = ProductImage.builder()
@@ -96,7 +92,6 @@ public class ProductService {
         }
         product.setImages(productImages);
 
-        // Tạo product variants và attributes
         Set<ProductVariant> productVariants = new HashSet<>();
         for (ProductVariantRequest variantRequest : request.getVariants()) {
             ProductVariant productVariant = ProductVariant.builder()
@@ -109,7 +104,6 @@ public class ProductService {
 
             Set<ProductVariantAttribute> variantAttributes = new HashSet<>();
             for (AttributeRequest attrRequest : variantRequest.getAttributes()) {
-                // Tìm hoặc tạo ProductAttribute
                 ProductAttribute productAttribute = productAttributeRepository.findByName(attrRequest.getName())
                         .orElseGet(() -> {
                             ProductAttribute newAttr = ProductAttribute.builder()
@@ -119,7 +113,6 @@ public class ProductService {
                         });
 
                 for (AttributeValueRequest valueRequest : attrRequest.getAttributeValue()) {
-                    // Tìm hoặc tạo ProductAttributeValue
                     ProductAttributeValue attributeValue = productAttributeValueRepository
                             .findByProductAttributeAndValue(productAttribute, valueRequest.getValue())
                             .orElseGet(() -> {
@@ -130,7 +123,6 @@ public class ProductService {
                                 return productAttributeValueRepository.save(newValue);
                             });
 
-                    // Tạo ProductVariantAttribute
                     ProductVariantAttribute variantAttribute = ProductVariantAttribute.builder()
                             .productVariant(productVariant)
                             .productAttributeValue(attributeValue)
@@ -143,10 +135,8 @@ public class ProductService {
         }
         product.setProductVariants(productVariants);
 
-        // Lưu product (các thực thể liên quan sẽ được lưu nhờ cascade)
         product = productRepository.save(product);
 
-        // Xây dựng DTO sau khi lưu
         List<ProductVariantResponse> productVariantResponses = new ArrayList<>();
         for (ProductVariant productVariant : product.getProductVariants()) {
             List<AttributeResponse> attributeResponses = new ArrayList<>();
@@ -165,10 +155,10 @@ public class ProductService {
             }
 
             ProductVariantResponse variantResponse = ProductVariantResponse.builder()
-                    .id(productVariant.getId()) // id đã được tạo
+                    .id(productVariant.getId())
                     .sku(productVariant.getSku())
                     .stock(productVariant.getStock())
-                    .productId(product.getId()) // id đã được tạo
+                    .productId(product.getId())
                     .price(productVariant.getPrice())
                     .image(productVariant.getImage())
                     .attributes(attributeResponses)
@@ -178,7 +168,7 @@ public class ProductService {
 
         List<ProductImageResponse> productImageResponses = product.getImages().stream()
                 .map(image -> ProductImageResponse.builder()
-                        .id(image.getId()) // id đã được tạo
+                        .id(image.getId())
                         .imageUrl(image.getImageUrl())
                         .displayOrder(image.getDisplayOrder())
                         .createdAt(image.getCreatedAt())
@@ -207,10 +197,8 @@ public class ProductService {
         Product product = productRepository.findProductById(id)
                 .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
 
-        // Ánh xạ ProductVariantResponse
         List<ProductVariantResponse> productVariantResponses = new ArrayList<>();
         for (ProductVariant productVariant : product.getProductVariants()) {
-            // Xây dựng danh sách AttributeResponse
             List<AttributeResponse> attributeResponses = new ArrayList<>();
             for (ProductVariantAttribute pva : productVariant.getProductVariantAttributes()) {
                 ProductAttributeValue pav = pva.getProductAttributeValue();
@@ -226,7 +214,6 @@ public class ProductService {
                 attributeResponses.add(attributeResponse);
             }
 
-            // Xây dựng ProductVariantResponse
             ProductVariantResponse productVariantResponse = ProductVariantResponse.builder()
                     .id(productVariant.getId())
                     .sku(productVariant.getSku())
@@ -239,7 +226,6 @@ public class ProductService {
             productVariantResponses.add(productVariantResponse);
         }
 
-        // Ánh xạ ProductResponse
         return ProductResponse.builder()
                 .id(product.getId())
                 .name(product.getName())

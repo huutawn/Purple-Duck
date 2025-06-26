@@ -50,19 +50,16 @@ public class OrderService {
 
 
     public OrderResponse createOrder(OrderCreationRequest request){
-        // 1. Xác thực người dùng
         String email = SecurityUtils.getCurrentUserLogin().get();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        // 2. Kiểm tra địa chỉ giao hàng
         UserAddress address = userAddressRepository.findById(request.getShippingAddressId())
                 .orElseThrow(() -> new AppException(ErrorCode.ADDRESS_NOT_FOUND));
         if (!address.getUser().getId().equals(user.getId())) {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
-        // 3. Lấy danh sách mặt hàng
         List<OrderItemRequest> items;
         if (request.isFromCart()) {
             Cart cart = cartRepository.findByUserId(user.getId())
@@ -85,7 +82,6 @@ public class OrderService {
             items = request.getItems();
         }
 
-        // 4. Kiểm tra điều kiện
         List<ItemInfo> itemInfos = new ArrayList<>();
         for (OrderItemRequest item : items) {
             Long variantId = getVariantId(item.getProductId(), item.getAttributeValueIds());
@@ -100,11 +96,9 @@ public class OrderService {
             itemInfos.add(new ItemInfo(variantId, variant.getProduct().getSeller().getId(), item.getQuantity(), variant.getPrice()));
         }
 
-        // 5. Nhóm sản phẩm theo shop
         Map<Long, List<ItemInfo>> itemsBySeller = itemInfos.stream()
                 .collect(Collectors.groupingBy(ItemInfo::getSellerId));
 
-        // 6. Tạo đơn hàng tổng
         BigDecimal totalAmount = calculateTotalAmount(itemInfos);
         Order order = Order.builder()
                 .user(user)
@@ -121,12 +115,10 @@ public class OrderService {
                 .build();
         orderRepository.save(order);
 
-        // 7. Tạo đơn hàng con và mặt hàng
         for (Map.Entry<Long, List<ItemInfo>> entry : itemsBySeller.entrySet()) {
             Long sellerId = entry.getKey();
             List<ItemInfo> sellerItems = entry.getValue();
 
-            // Tạo SubOrder
             SubOrder subOrder = SubOrder.builder()
                     .order(order)
                     .seller(sellerRepository.findById(sellerId)
@@ -136,7 +128,6 @@ public class OrderService {
                     .build();
             subOrderRepository.save(subOrder);
 
-            // Tạo OrderItem
             for (ItemInfo item : sellerItems) {
                 ProductVariant variant = productVariantRepository.findById(item.getVariantId()).get();
                 OrderItem orderItem = OrderItem.builder()
@@ -147,41 +138,24 @@ public class OrderService {
                         .build();
                 orderItemRepository.save(orderItem);
 
-                // Cập nhật tồn kho
                 variant.setStock(variant.getStock() - item.getQuantity());
                 productVariantRepository.save(variant);
             }
         }
 
-//        // 8. Xử lý mã giảm giá
-//        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
-//            Coupon coupon = couponRepository.findByCode(request.getCouponCode())
-//                    .orElseThrow(() -> new AppException(ErrorCode.COUPON_NOT_FOUND));
-//            if (coupon.getExpiresAt().isBefore(LocalDateTime.now()) || coupon.getUsageCount() >= coupon.getUsageLimit()) {
-//                throw new AppException(ErrorCode.COUPON_INVALID);
-//            }
-//            BigDecimal discount = calculateDiscount(coupon, totalAmount);
-//            order.setDiscountAmount(discount);
-//            order.setTotalAmount(totalAmount.subtract(discount));
-//            coupon.setUsageCount(coupon.getUsageCount() + 1);
-//            couponRepository.save(coupon);
-//            orderRepository.save(order);
-//        }
+//
 
-        // 9. Xóa giỏ hàng nếu từ cart
         if (request.isFromCart()) {
             Cart cart = cartRepository.findByUserId(user.getId()).get();
             cart.getCartItems().clear();
             cartRepository.save(cart);
         }
 
-        // 10. Trả về response
         return orderMapper.toOrderResponse(order);
 
     }
     public Long getVariantId(Long productId, List<Long> attributeValueIds) {
 
-        // 2. Kiểm tra các attribute_value_id tồn tại
         List<Long> validAttributeValueIds = productAttributeValueRepository
                 .findAllById(attributeValueIds)
                 .stream()
@@ -189,7 +163,6 @@ public class OrderService {
                 .collect(Collectors.toList());
 
 
-        // 3. Tìm variant_id
         Long attributeValueCount = (long) attributeValueIds.size();
         Long variantId = productVariantRepository
                 .findVariantIdByProductIdAndAttributeValueIds(productId, attributeValueIds, attributeValueCount)
