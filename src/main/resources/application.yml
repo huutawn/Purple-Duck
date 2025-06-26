@@ -1,0 +1,33 @@
+server:
+  port: 8080
+
+
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: huutankg2005@gmail.com
+    password: ${MAIL_APP_PS}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/test
+    username: postgres
+    password: huutawn1412
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+jwt:
+  signerKey: "sDd3tkGGcBWFeKUZsqBgXGPx/dkcXehI8WcYobvUW1T7tLqgVsFHXDPotVIK2TL/"
+  valid-duration: 7200 #in hours
+  refreshable-duration: 72000 #in hours
+cloudinary:
+  cloud-name: ${CLOUD_NAME}
+  api-key: ${API_KEY}
+  secret-key: ${API_SECRET}
