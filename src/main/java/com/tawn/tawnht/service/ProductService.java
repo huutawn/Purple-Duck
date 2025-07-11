@@ -8,6 +8,7 @@ import com.tawn.tawnht.dto.response.*;
 import com.tawn.tawnht.entity.*;
 import com.tawn.tawnht.exception.AppException;
 import com.tawn.tawnht.exception.ErrorCode;
+import com.tawn.tawnht.mapper.ProductMapper;
 import com.tawn.tawnht.repository.jpa.*;
 import com.tawn.tawnht.utils.SecurityUtils;
 
@@ -25,10 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -43,6 +41,7 @@ public class ProductService {
     ProductAttributeRepository productAttributeRepository;
     ProductAttributeValueRepository productAttributeValueRepository;
     ProductImageRepository productImageRepository;
+    ProductMapper productMapper;
     ProductVariantAttributeRepository productVariantAttributeRepository;
     @Transactional
     public ProductResponse createProduct(ProductCreationRequest request) {
@@ -253,44 +252,41 @@ public class ProductService {
     public PageResponse<ProductResponse> getAllProduct(Specification<Product> spec, int page, int size) {
         Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
         Pageable pageable = PageRequest.of(page - 1, size, sort);
-        Page<Product> products = productRepository.findAll(pageable);
-        List<ProductResponse> productResponses=new ArrayList<>();
-        for (Product product:products){
-           ProductResponse productResponse=ProductResponse.builder()
-                   .id(product.getId())
-                   .categoryId(product.getId())
-                   .coverImage(product.getCoverImage())
-                   .images(product.getImages().stream()
-                           .map(image -> ProductImageResponse.builder()
-                                   .id(image.getId())
-                                   .imageUrl(image.getImageUrl())
-                                   .displayOrder(image.getDisplayOrder())
-                                   .build())
-                           .collect(Collectors.toList()))
-                   .metaTitle(product.getMetaTitle())
-                   .sellerId(product.getSeller().getId())
-                   .slug(product.getSlug())
-                   .warrantyInfo(product.getWarrantyInfo())
-                   .name(product.getName())
-                   .description(product.getDescription())
-                   .createdAt(product.getCreatedAt())
-                   .productVariants(product.getProductVariants().stream().map(variant->ProductVariantResponse.builder()
-                           .productId(product.getId())
-                           .image(variant.getImage())
-                           .id(variant.getId())
-                           .price(variant.getPrice())
-                           .sku(variant.getSku())
-                           .stock(variant.getStock())
-                           .build()).collect(Collectors.toList()))
-                   .build();
-        }
+        Page<Product> products = (spec != null) ? productRepository.findAll(spec, pageable) : productRepository.findAll(pageable);
+
+        List<ProductResponse> productResponses = products.getContent().stream()
+                .map(product -> {
+                    if (product == null) return null;
+                    return productMapper.toProductResponse(product); // Sử dụng ProductMapper
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
 
         return PageResponse.<ProductResponse>builder()
-                .currentPage(page)
+                .currentPage(products.getNumber() + 1) // Sử dụng 1-based index
                 .pageSize(pageable.getPageSize())
                 .totalElements(products.getTotalElements())
                 .totalPages(products.getTotalPages())
                 .data(productResponses)
                 .build();
     }
+    public PageResponse<ProductResponse> getByCategory(Long categoryId, Specification<Product> spec, int page, int size) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new AppException(ErrorCode.CATEGORY_NOT_FOUND));
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable pageable = PageRequest.of(page - 1, size, sort);
+        Page<Product> products = productRepository.findAllByCategory(pageable, category); // Giả định phương thức này
+        List<ProductResponse> productResponses = products.getContent().stream()
+                .map(productMapper::toProductResponse)
+                .toList();
+
+        return PageResponse.<ProductResponse>builder()
+                .currentPage(products.getNumber() + 1) // Sử dụng 1-based index
+                .pageSize(pageable.getPageSize())
+                .totalElements(products.getTotalElements())
+                .totalPages(products.getTotalPages())
+                .data(productResponses)
+                .build();
+    }
+
 }

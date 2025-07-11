@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity
-@Table(name = "orders")
+@Table(name = "order_item")
 public class OrderItem {
     @Id
             @GeneratedValue(strategy = GenerationType.IDENTITY)

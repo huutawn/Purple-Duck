@@ -15,6 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import org.hibernate.query.Page;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -44,10 +45,20 @@ public class ProductController {
                 .result(productService.getAllProduct(spec, page, size))
                 .build();
     }
+    @GetMapping("/category")
+    ApiResponse<PageResponse<ProductResponse>> getByCategory( @Filter Specification<Product> spec,
+                                                @RequestParam(value = "categoryId",required = false) Long categoryId,
+                                                @RequestParam(value = "page", required = false, defaultValue = "1") int page,
+                                                @RequestParam(value = "size", required = false, defaultValue = "10") int size) {
+        return ApiResponse.<PageResponse<ProductResponse>>builder()
+                .result(productService.getByCategory(categoryId,spec,page,size))
+                .build();
+    }
     @GetMapping("/{id}")
     ApiResponse<ProductResponse> get(@PathVariable Long id) {
         return ApiResponse.<ProductResponse>builder()
                 .result(productService.getProductById(id))
                 .build();
     }
+
 }

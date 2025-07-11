@@ -12,4 +12,5 @@ import java.util.List;
 @Repository
 public interface SubOrderRepository extends JpaRepository<SubOrder,Long> {
     Page<SubOrder> findAllBySeller(Pageable pageable, Seller seller);
+    void deleteByOrderId(Long orderId);
 }

@@ -12,6 +12,7 @@ import com.tawn.tawnht.exception.ErrorCode;
 import com.tawn.tawnht.mapper.OrderMapper;
 import com.tawn.tawnht.repository.jpa.*;
 import com.tawn.tawnht.utils.SecurityUtils;
+import jakarta.transaction.Transactional;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.RequiredArgsConstructor;
@@ -21,13 +22,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -60,14 +60,17 @@ public class OrderService {
             throw new AppException(ErrorCode.UNAUTHORIZED);
         }
 
+        log.info("is from cart: "+request.isFromCart()+"");
         List<OrderItemRequest> items;
         if (request.isFromCart()) {
             Cart cart = cartRepository.findByUserId(user.getId())
                     .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
+            log.info("cart id: "+cart.getId()+"");
             items = cart.getCartItems().stream()
                     .flatMap(item -> item.getVariantQuantities().entrySet().stream()
                             .map(entry -> {
                                 ProductVariant variant = entry.getKey();
+                                log.info("product variant id: "+variant.getId()+"");
                                 Integer quantity = entry.getValue();
                                 OrderItemRequest req = new OrderItemRequest();
                                 req.setProductId(variant.getProduct().getId());
@@ -90,11 +93,10 @@ public class OrderService {
             if (variant.getStock() < item.getQuantity()) {
                 throw new AppException(ErrorCode.OUT_OF_STOCK);
             }
-            if (!variant.getProduct().isActive()) {
-                throw new AppException(ErrorCode.PRODUCT_NOT_ACTIVE);
-            }
+
             itemInfos.add(new ItemInfo(variantId, variant.getProduct().getSeller().getId(), item.getQuantity(), variant.getPrice()));
         }
+
 
         Map<Long, List<ItemInfo>> itemsBySeller = itemInfos.stream()
                 .collect(Collectors.groupingBy(ItemInfo::getSellerId));
@@ -113,10 +115,13 @@ public class OrderService {
                 .note(request.getNotes())
                 .createdAt(LocalDateTime.now())
                 .build();
-        orderRepository.save(order);
-
+        order=orderRepository.save(order);
+        log.info("order id: "+order.getId());
+        List<SubOrder> subOrders=new ArrayList<>();
+        Set<OrderItem> orderItems=new HashSet<>();
         for (Map.Entry<Long, List<ItemInfo>> entry : itemsBySeller.entrySet()) {
             Long sellerId = entry.getKey();
+            log.info("seller id: "+sellerId+"");
             List<ItemInfo> sellerItems = entry.getValue();
 
             SubOrder subOrder = SubOrder.builder()
@@ -126,7 +131,9 @@ public class OrderService {
                     .status("pending")
                     .createdAt(LocalDateTime.now())
                     .build();
-            subOrderRepository.save(subOrder);
+            subOrder=subOrderRepository.save(subOrder);
+
+            log.info("suborderId "+subOrder.getId()+"");
 
             for (ItemInfo item : sellerItems) {
                 ProductVariant variant = productVariantRepository.findById(item.getVariantId()).get();
@@ -136,21 +143,24 @@ public class OrderService {
                         .quantity(item.getQuantity())
                         .price(variant.getPrice())
                         .build();
-                orderItemRepository.save(orderItem);
-
+                log.info("variant price: "+variant.getPrice());
+               orderItem= orderItemRepository.save(orderItem);
+               orderItems.add(orderItem);
                 variant.setStock(variant.getStock() - item.getQuantity());
-                productVariantRepository.save(variant);
+               variant= productVariantRepository.save(variant);
             }
+            subOrder.setOrderItems(orderItems);
+            subOrders.add(subOrder);
         }
-
+        order.setSubOrders(subOrders);
 //
 
         if (request.isFromCart()) {
             Cart cart = cartRepository.findByUserId(user.getId()).get();
             cart.getCartItems().clear();
-            cartRepository.save(cart);
+            cart=cartRepository.save(cart);
         }
-
+        log.info("totalAmount: "+totalAmount);
         return orderMapper.toOrderResponse(order);
 
     }
@@ -171,9 +181,11 @@ public class OrderService {
         return variantId;
     }
     private BigDecimal calculateTotalAmount(List<ItemInfo> items) {
+        log.info("variant price:" +items.get(0).getPrice()+"");
         return items.stream()
                 .map(item -> item.getPrice().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
     }
 
 //    private BigDecimal calculateDiscount(Coupon coupon, BigDecimal totalAmount) {
@@ -199,7 +211,7 @@ public class OrderService {
             this.price = price;
         }
     }
-    public PageResponse<SubOrderResponse> getAllOrderBySeller(int page, int size){
+    public PageResponse<SubOrderResponse> getAllOrderBySeller(Specification<Order> spec,int page, int size){
         String email=SecurityUtils.getCurrentUserLogin().orElseThrow(
                 ()->new AppException(ErrorCode.USER_NOT_EXISTED)
         );
@@ -218,5 +230,35 @@ public class OrderService {
                 .totalElements(subOrders.getTotalElements())
                 .totalPages(subOrders.getTotalPages())
                 .build();
+    }
+    @Transactional
+    public void deleteOrder(Long orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+
+        // Kiểm tra trạng thái
+        if (!"PENDING".equals(order.getStatus()) && !"CANCELLED".equals(order.getStatus())) {
+            throw new AppException(ErrorCode.ORDER_CANNOT_BE_DELETED);
+        }
+
+        // Lấy tất cả SubOrder
+        List<SubOrder> subOrders = order.getSubOrders();
+        for (SubOrder subOrder : subOrders) {
+            // Hoàn lại stock cho ProductVariant
+            subOrder.getOrderItems().forEach(item -> {
+                ProductVariant variant = item.getProductVariant();
+                variant.setStock(variant.getStock() + item.getQuantity());
+                productVariantRepository.save(variant);
+            });
+
+            // Xóa OrderItem
+            orderItemRepository.deleteBySubOrderId(subOrder.getId());
+        }
+
+        // Xóa SubOrder
+        subOrderRepository.deleteByOrderId(orderId);
+
+        // Xóa Order
+        orderRepository.delete(order);
     }
 }

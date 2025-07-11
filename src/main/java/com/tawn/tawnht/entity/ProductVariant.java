@@ -26,7 +26,7 @@ public class ProductVariant {
     @OneToMany(cascade = CascadeType.ALL,mappedBy = "productVariant")
     Set<ProductVariantAttribute> productVariantAttributes;
     @OneToMany(cascade = CascadeType.ALL,fetch = FetchType.LAZY,mappedBy = "productVariant")
-            Set<OrderItem> orderItems;
+    Set<OrderItem> orderItems;
     String sku;
     String image;
     BigDecimal price;

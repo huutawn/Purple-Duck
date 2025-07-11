@@ -20,8 +20,10 @@ public class ProductVariantAttribute {
     Long id;
 
     @ManyToOne
+    @JoinColumn(name = "product_variant_id")
     ProductVariant productVariant;
     @ManyToOne
+    @JoinColumn(name = "product_attribute_value_id")
     ProductAttributeValue productAttributeValue;
 
 }

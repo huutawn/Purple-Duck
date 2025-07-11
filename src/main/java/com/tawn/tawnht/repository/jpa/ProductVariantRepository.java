@@ -2,6 +2,7 @@ package com.tawn.tawnht.repository.jpa;
 
 import com.tawn.tawnht.entity.ProductVariant;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -29,4 +30,9 @@ public interface ProductVariantRepository extends JpaRepository<ProductVariant,L
             @Param("attributeValueIds") List<Long> attributeValueIds,
             @Param("attributeValueCount") Long attributeValueCount
     );
+    @Modifying
+    @Query("DELETE FROM ProductVariant")
+    void deleteAllVariants();
+    @Query("SELECT v FROM ProductVariant v JOIN FETCH v.productVariantAttributes pva WHERE v.product.id = :productId")
+    List<ProductVariant> findByProductIdWithAttributes(@Param("productId") Long productId);
 }

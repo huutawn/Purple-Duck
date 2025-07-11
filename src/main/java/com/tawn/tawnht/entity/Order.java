@@ -9,6 +9,7 @@ import lombok.experimental.FieldDefaults;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -38,7 +39,8 @@ public class Order {
     UserAddress userAddress;
 
     @OneToMany(mappedBy = "order",cascade = CascadeType.ALL,fetch = FetchType.LAZY,orphanRemoval = true)
-    List<SubOrder> subOrders;
+    @JsonManagedReference
+    List<SubOrder> subOrders=new ArrayList<>();
     String trackingNumber;
     String shippingCarrier;
     LocalDate estimatedDeliveryDate;

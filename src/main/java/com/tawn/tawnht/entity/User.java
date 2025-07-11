@@ -36,7 +36,7 @@ public class User {
     Set<Role> roles;
     @OneToMany(cascade = CascadeType.ALL,mappedBy = "user",orphanRemoval = true,fetch = FetchType.LAZY)
     Set<UserAddress> userAddresses;
-    @OneToOne
+    @OneToOne(cascade = CascadeType.ALL,mappedBy = "user",fetch = FetchType.LAZY,orphanRemoval = true)
     Cart cart;
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference
@@ -44,4 +44,7 @@ public class User {
 
     @OneToMany(cascade = CascadeType.ALL,mappedBy = "user",orphanRemoval = true,fetch = FetchType.LAZY)
     Set<Order> orders;
+    public User(String userId){
+        this.id=userId;
+    }
 }

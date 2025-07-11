@@ -3,8 +3,10 @@ package com.tawn.tawnht.mapper;
 import com.tawn.tawnht.dto.response.*;
 import com.tawn.tawnht.entity.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -12,10 +14,13 @@ import java.util.stream.Collectors;
 
 @Component
 @RequiredArgsConstructor
+@Slf4j
 public class ProductMapper {
     // Ánh xạ Product sang ProductResponse
     public ProductResponse toProductResponse(Product product) {
         if (product == null) return null;
+
+        log.info("Mapping Product with ID: {} to ProductResponse", product.getId());
 
         ProductResponse response = new ProductResponse();
         response.setId(product.getId());
@@ -36,89 +41,84 @@ public class ProductMapper {
         return response;
     }
 
-
-    // Ánh xạ Set<ProductVariant> sang List<ProductVariantResponse>
-    private List<ProductVariantResponse> toProductVariantResponses(Set<ProductVariant> variants) {
-        if (variants == null) return null;
-        return variants.stream()
-                .map(this::toProductVariantResponse)
-                .collect(Collectors.toList());
-    }
-
-    // Ánh xạ ProductVariant sang ProductVariantResponse
-    private ProductVariantResponse toProductVariantResponse(ProductVariant variant) {
-        if (variant == null) return null;
-
-        ProductVariantResponse response = new ProductVariantResponse();
-        response.setId(variant.getId());
-        response.setProductId(variant.getProduct() != null ? variant.getProduct().getId() : null);
-        response.setProductName(variant.getProduct() != null ? variant.getProduct().getName() : null);
-        response.setSku(variant.getSku());
-        response.setPrice(variant.getPrice());
-        response.setStock(variant.getStock());
-        response.setImage(variant.getImage());
-        response.setAttributes(toAttributeResponses(variant.getProductVariantAttributes(), variant.getProduct()));
-        return response;
-    }
-
-    // Ánh xạ Set<ProductVariantAttribute> sang List<AttributeResponse>
-    private List<AttributeResponse> toAttributeResponses(Set<ProductVariantAttribute> variantAttributes, Product product) {
-        if (variantAttributes == null || product == null) return null;
-
-        // Lấy tất cả ProductAttribute và ProductAttributeValue liên quan
-        Set<ProductAttribute> allAttributes = product.getProductVariants().stream()
-                .flatMap(v -> v.getProductVariantAttributes().stream())
-                .map(attr -> attr.getProductAttributeValue().getProductAttribute())
-                .collect(Collectors.toSet());
-
-        // Nhóm các giá trị thuộc tính đã chọn theo ProductAttribute
-        Map<ProductAttribute, ProductAttributeValue> selectedMap = variantAttributes.stream()
-                .collect(Collectors.toMap(
-                        attr -> attr.getProductAttributeValue().getProductAttribute(),
-                        ProductVariantAttribute::getProductAttributeValue
-                ));
-
-        return allAttributes.stream()
-                .map(attribute -> {
-                    AttributeResponse response = new AttributeResponse();
-                    response.setAttributeId(attribute.getId());
-                    response.setAttributeName(attribute.getDisplayName());
-
-
-
-                    // Tất cả giá trị có thể
-                    response.setAttributeValue(attribute.getProductAttributeValue().stream()
-                            .map(val -> {
-                                AttributeValueResponse valRes = new AttributeValueResponse();
-                                valRes.setAttributeValueId(val.getId());
-                                valRes.setValue(val.getValue());
-                                valRes.setDisplayValue(val.getDisplayValue());
-                                return valRes;
-                            })
-                            .collect(Collectors.toList()));
-                    return response;
-                })
-                .collect(Collectors.toList());
-    }
-
-    // Ánh xạ Set<ProductImage> sang List<ProductImageResponse>
     private List<ProductImageResponse> toProductImageResponses(Set<ProductImage> images) {
-        if (images == null) return null;
+        if (images == null) return new ArrayList<>();
         return images.stream()
                 .map(this::toProductImageResponse)
                 .collect(Collectors.toList());
     }
 
-    // Ánh xạ ProductImage sang ProductImageResponse
     private ProductImageResponse toProductImageResponse(ProductImage image) {
         if (image == null) return null;
 
-        ProductImageResponse response = new ProductImageResponse();
-        response.setId(image.getId());
-        response.setProductId(image.getProduct() != null ? image.getProduct().getId() : null);
-        response.setImageUrl(image.getImageUrl());
-        response.setDisplayOrder(image.getDisplayOrder());
-        response.setCreatedAt(image.getCreatedAt());
-        return response;
+        return ProductImageResponse.builder()
+                .id(image.getId())
+                .productId(image.getProduct() != null ? image.getProduct().getId() : null)
+                .imageUrl(image.getImageUrl())
+                .displayOrder(image.getDisplayOrder())
+                .createdAt(image.getCreatedAt())
+                .build();
+    }
+
+    private List<ProductVariantResponse> toProductVariantResponses(Set<ProductVariant> variants) {
+        if (variants == null) return new ArrayList<>();
+        return variants.stream()
+                .map(this::toProductVariantResponse)
+                .collect(Collectors.toList());
+    }
+
+    private ProductVariantResponse toProductVariantResponse(ProductVariant variant) {
+        if (variant == null) return null;
+
+        log.info("Mapping ProductVariant with ID: {} to ProductVariantResponse", variant.getId());
+
+        return ProductVariantResponse.builder()
+                .id(variant.getId())
+                .productId(variant.getProduct() != null ? variant.getProduct().getId() : null)
+                .productName(variant.getProduct() != null ? variant.getProduct().getName() : null)
+                .sku(variant.getSku())
+                .price(variant.getPrice())
+                .stock(variant.getStock())
+                .image(variant.getImage())
+                .attributes(toAttributeResponses(variant.getProductVariantAttributes()))
+                .build();
+    }
+
+    private List<AttributeResponse> toAttributeResponses(Set<ProductVariantAttribute> variantAttributes) {
+        if (variantAttributes == null) return new ArrayList<>();
+
+        log.info("Mapping {} ProductVariantAttributes to AttributeResponses", variantAttributes.size());
+
+        // Nhóm các thuộc tính theo ProductAttribute
+        Map<ProductAttribute, List<ProductAttributeValue>> groupedAttributes = variantAttributes.stream()
+                .collect(Collectors.groupingBy(
+                        attr -> attr.getProductAttributeValue().getProductAttribute(),
+                        Collectors.mapping(
+                                ProductVariantAttribute::getProductAttributeValue,
+                                Collectors.toList()
+                        )
+                ));
+
+        return groupedAttributes.entrySet().stream()
+                .map(entry -> {
+                    ProductAttribute attribute = entry.getKey();
+                    List<ProductAttributeValue> values = entry.getValue();
+
+                    AttributeResponse response = new AttributeResponse();
+                    response.setAttributeId(attribute.getId());
+                    response.setAttributeName(attribute.getDisplayName() != null ? attribute.getDisplayName() : attribute.getName());
+
+                    List<AttributeValueResponse> valueResponses = values.stream()
+                            .map(val -> AttributeValueResponse.builder()
+                                    .attributeValueId(val.getId())
+                                    .value(val.getValue())
+                                    .displayValue(val.getDisplayValue() != null ? val.getDisplayValue() : val.getValue())
+                                    .build())
+                            .collect(Collectors.toList());
+
+                    response.setAttributeValue(valueResponses);
+                    return response;
+                })
+                .collect(Collectors.toList());
     }
 }

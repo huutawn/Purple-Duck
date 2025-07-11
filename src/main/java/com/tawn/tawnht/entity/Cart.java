@@ -7,6 +7,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.Set;
 
 
@@ -23,9 +24,10 @@ public class Cart {
             @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
     @OneToOne
+    @JoinColumn(name = "user_id")
     User user;
     @OneToMany(cascade = CascadeType.ALL,fetch = FetchType.LAZY,orphanRemoval = true,mappedBy = "cart")
-            Set<CartItem> cartItems;
+            Set<CartItem> cartItems = new HashSet<>();;
     String sessionId;
     LocalDateTime createdAt;
 

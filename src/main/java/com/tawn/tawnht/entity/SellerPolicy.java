@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE)
 @Entity
-@Table(name = "sellers")
+@Table(name = "seller_policy")
 public class SellerPolicy {
     @Id
             @GeneratedValue(strategy = GenerationType.IDENTITY)

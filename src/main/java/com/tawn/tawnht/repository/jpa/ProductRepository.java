@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -27,6 +28,9 @@ public interface ProductRepository extends JpaRepository<Product,Long>, JpaSpeci
     Optional<Product> findProductById(@Param("id") Long id);
 
     Page<Product> findAllByCategory(Pageable pageable, Category category);
+    @Modifying
+    @Query("DELETE FROM Product")
+    void deleteAllProducts();
 
 
 }

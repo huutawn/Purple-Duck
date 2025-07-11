@@ -16,7 +16,6 @@ import java.time.LocalDateTime;
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
 public class AddressCreationRequest {
-    Order order;
     String city;
     String district;
     String commune;

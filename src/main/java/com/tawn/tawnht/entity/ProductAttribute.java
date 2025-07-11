@@ -25,6 +25,5 @@ public class ProductAttribute {
     String attributeType;
 
     @OneToMany(cascade = CascadeType.ALL,orphanRemoval = true,mappedBy = "productAttribute",fetch = FetchType.LAZY)
-            @JsonManagedReference
     Set<ProductAttributeValue> productAttributeValue;
 }

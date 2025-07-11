@@ -1,6 +1,8 @@
 package com.tawn.tawnht.service;
 
 
+import com.tawn.tawnht.dto.request.CategoryReq;
+import com.tawn.tawnht.dto.response.CategoryResponse;
 import com.tawn.tawnht.entity.Category;
 
 import com.tawn.tawnht.repository.jpa.CategoryRepository;
@@ -25,17 +27,24 @@ import java.util.List;
 public class CategoryService {
     UserRepository userRepository;
     CategoryRepository categoryRepository;
-    public String createCategory(List<String> names){
+    public String createCategory(List<CategoryReq> reqs){
         List<Category> categories = new ArrayList<>();
-        for (String name : names) {
+        for (CategoryReq req : reqs) {
             Category category = new Category();
-            category.setName(name);
+            category.setName(req.getName());
+            category.setImage(req.getUrl());
             categories.add(category);
         }
         categoryRepository.saveAll(categories);
         return "Categories created successfully";
     }
-    public List<Category> getAll(){
-        return categoryRepository.findAll();
+    public List<CategoryResponse> getAll(){
+        List<Category> categories=categoryRepository.findAll();
+        return categories.stream().map(category -> CategoryResponse.builder()
+                .name(category.getName())
+                .id(category.getId())
+                .image(category.getImage())
+                .build()).toList();
     }
+
 }

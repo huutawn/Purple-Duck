@@ -1,5 +1,6 @@
 package com.tawn.tawnht.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -21,9 +22,11 @@ public class Seller {
             @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
     @OneToOne
+    @JsonBackReference
+    @JoinColumn(name = "user_id")
     User user;
 
-    @OneToMany(fetch = FetchType.LAZY,cascade = CascadeType.ALL,orphanRemoval = true)
+    @OneToMany(fetch = FetchType.LAZY,cascade = CascadeType.ALL,orphanRemoval = true,mappedBy = "seller")
     Set<Product> products;
     @OneToOne(mappedBy = "seller",cascade = CascadeType.ALL)
             SellerPolicy sellerPolicy;

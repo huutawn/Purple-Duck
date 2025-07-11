@@ -23,7 +23,9 @@ public enum ErrorCode {
     OUT_OF_STOCK(1014,"số lượng hàng không đủ",HttpStatus.BAD_REQUEST),
     PRODUCT_NOT_ACTIVE(1015,"hàng khóa",HttpStatus.BAD_REQUEST),
     ADDRESS_NOT_FOUND(1015,"không tìm thấy địa chỉ",HttpStatus.BAD_REQUEST),
-    CART_NOT_FOUND(1016,"kh",HttpStatus.BAD_REQUEST)
+    CART_NOT_FOUND(1016,"kh",HttpStatus.BAD_REQUEST),
+    ORDER_NOT_FOUND(1017,"KHÔNG TÌM THẤY ĐƠN HÀNG",HttpStatus.NOT_FOUND),
+    ORDER_CANNOT_BE_DELETED(1018,"đơn hàng hiện tại không thể hủy",HttpStatus.BAD_REQUEST)
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

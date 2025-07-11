@@ -1,5 +1,6 @@
 package com.tawn.tawnht.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
@@ -22,6 +23,8 @@ public class SubOrder {
     Long id;
 
     @ManyToOne
+    @JoinColumn(name = "order_id")
+    @JsonBackReference
     Order order;
 
     @ManyToOne

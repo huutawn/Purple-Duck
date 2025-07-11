@@ -23,6 +23,6 @@ public class ProductAttributeValue {
     String displayValue;
     @ManyToOne
     ProductAttribute productAttribute;
-    @OneToMany
+    @OneToMany(mappedBy = "productAttributeValue",orphanRemoval = true,cascade = CascadeType.ALL,fetch = FetchType.LAZY)
     Set<ProductVariantAttribute> productVariantAttributes;
 }

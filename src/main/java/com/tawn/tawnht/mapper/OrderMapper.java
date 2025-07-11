@@ -2,13 +2,16 @@ package com.tawn.tawnht.mapper;
 
 import com.tawn.tawnht.dto.response.*;
 import com.tawn.tawnht.entity.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
+@Slf4j
 public class OrderMapper {
     public OrderResponse toOrderResponse(Order order){
         OrderResponse orderResponse=OrderResponse.builder()
@@ -32,6 +35,7 @@ public class OrderMapper {
                 .build();
         return orderResponse;
     }
+
     public UserAddressResponse toUserAddressResponse(UserAddress userAddress){
         UserAddressResponse userAddressResponse=UserAddressResponse.builder()
                 .id(userAddress.getId())

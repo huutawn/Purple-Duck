@@ -1,6 +1,8 @@
 package com.tawn.tawnht.controller;
 
 import com.tawn.tawnht.dto.request.ApiResponse;
+import com.tawn.tawnht.dto.request.CategoryReq;
+import com.tawn.tawnht.dto.response.CategoryResponse;
 import com.tawn.tawnht.entity.Category;
 import com.tawn.tawnht.service.CategoryService;
 import com.tawn.tawnht.service.CloudinaryService;
@@ -20,14 +22,14 @@ import java.util.List;
 public class CategoryController {
     CategoryService categoryService;
     @PostMapping
-    ApiResponse<String> upload(@RequestBody List<String> names)  {
+    ApiResponse<String> upload(@RequestBody List<CategoryReq> req)  {
         return ApiResponse.<String>builder()
-                .result(categoryService.createCategory(names))
+                .result(categoryService.createCategory(req))
                 .build();
     }
     @GetMapping
-    ApiResponse<List<Category>> get()  {
-        return ApiResponse.<List<Category>>builder()
+    ApiResponse<List<CategoryResponse>> get()  {
+        return ApiResponse.<List<CategoryResponse>>builder()
                 .result(categoryService.getAll())
                 .build();
     }
