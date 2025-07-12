@@ -1,9 +1,6 @@
 package com.tawn.tawnht.controller;
 
-import com.tawn.tawnht.dto.request.AddressCreationRequest;
-import com.tawn.tawnht.dto.request.ApiResponse;
-import com.tawn.tawnht.dto.request.OrderCreationRequest;
-import com.tawn.tawnht.dto.request.ProductCreationRequest;
+import com.tawn.tawnht.dto.request.*;
 import com.tawn.tawnht.dto.response.PageResponse;
 import com.tawn.tawnht.dto.response.ProductResponse;
 import com.tawn.tawnht.dto.response.OrderResponse;
@@ -41,5 +38,22 @@ public class OrderController {
                 .result(orderService.getAllOrderBySeller(spec, page, size))
                 .build();
     }
-
+    @DeleteMapping("/{orderId}")
+    ApiResponse<Void> delete(@PathVariable  Long orderId)  {
+        return ApiResponse.<Void>builder()
+                .result(orderService.deleteOrder(orderId))
+                .build();
+    }
+    @PatchMapping("/{orderId}")
+    ApiResponse<OrderResponse> startOrder(@PathVariable Long orderId)  {
+        return ApiResponse.<OrderResponse>builder()
+                .result(orderService.startOrder(orderId))
+                .build();
+    }
+    @PatchMapping
+    ApiResponse<SubOrderResponse> setStatus(@RequestBody SetStatusOrderReq req)  {
+        return ApiResponse.<SubOrderResponse>builder()
+                .result(orderService.setStatus(req))
+                .build();
+    }
 }

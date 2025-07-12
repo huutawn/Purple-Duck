@@ -52,7 +52,7 @@ public class UserService {
         user.setTimeCreateToken(LocalDateTime.now());
         user.setIsVerified(false);
 
-        requestVerify(user.getEmail(),user.getTokenVerify());
+//        requestVerify(user.getEmail(),user.getTokenVerify());
 
         return userMapper.toUserResponse(userRepository.save(user));
     }

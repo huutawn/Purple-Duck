@@ -30,5 +30,6 @@ public class ProductVariant {
     String sku;
     String image;
     BigDecimal price;
+    Boolean isActive;
     Integer stock;
 }

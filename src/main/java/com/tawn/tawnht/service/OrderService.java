@@ -2,6 +2,7 @@ package com.tawn.tawnht.service;
 
 import com.tawn.tawnht.dto.request.OrderCreationRequest;
 import com.tawn.tawnht.dto.request.OrderItemRequest;
+import com.tawn.tawnht.dto.request.SetStatusOrderReq;
 import com.tawn.tawnht.dto.response.OrderResponse;
 import com.tawn.tawnht.dto.response.PageResponse;
 import com.tawn.tawnht.dto.response.SubOrderResponse;
@@ -70,7 +71,7 @@ public class OrderService {
                     .flatMap(item -> item.getVariantQuantities().entrySet().stream()
                             .map(entry -> {
                                 ProductVariant variant = entry.getKey();
-                                log.info("product variant id: "+variant.getId()+"");
+                                log.info("product var   iant id: "+variant.getId()+"");
                                 Integer quantity = entry.getValue();
                                 OrderItemRequest req = new OrderItemRequest();
                                 req.setProductId(variant.getProduct().getId());
@@ -109,7 +110,7 @@ public class OrderService {
                 .taxAmount(BigDecimal.ZERO)
                 .discountAmount(BigDecimal.ZERO)
                 .couponCode(request.getCouponCode())
-                .status("pending")
+                .status("init")
                 .paymentMethod(request.getPaymentMethod())
                 .userAddress(address)
                 .note(request.getNotes())
@@ -232,7 +233,7 @@ public class OrderService {
                 .build();
     }
     @Transactional
-    public void deleteOrder(Long orderId) {
+    public Void deleteOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
@@ -260,5 +261,30 @@ public class OrderService {
 
         // Xóa Order
         orderRepository.delete(order);
+    }
+    public OrderResponse startOrder(Long orderId){
+       Order order=orderRepository.findById(orderId)
+                .orElseThrow(()->new AppException(ErrorCode.ORDER_NOT_FOUND));
+       order.setStatus("pending");
+       List<SubOrder> subOrders=order.getSubOrders();
+       for(SubOrder subOrder:subOrders){
+           Set<OrderItem> orderItems=subOrder.getOrderItems();
+           for (OrderItem orderItem:orderItems){
+               ProductVariant productVariant=orderItem.getProductVariant();
+               Product product=productVariant.getProduct();
+               int purchase= product.getPurchase();;
+               product.setPurchase(purchase+orderItem.getQuantity());
+               productRepository.save(product);
+           }
+       }
+       order=orderRepository.save(order);
+       return orderMapper.toOrderResponse(order);
+    }
+
+    public SubOrderResponse setStatus(SetStatusOrderReq req){
+        SubOrder subOrder=subOrderRepository.findById(req.getSubOrderId())
+                .orElseThrow(()->new AppException(ErrorCode.ORDER_NOT_FOUND));
+        subOrder.setStatus(req.getStatus());
+        return orderMapper.toSubOrderResponse(subOrderRepository.save(subOrder));
     }
 }

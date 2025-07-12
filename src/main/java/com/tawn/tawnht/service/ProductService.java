@@ -74,6 +74,7 @@ public class ProductService {
                 .description(request.getDescription())
                 .metaTitle(request.getMetaTitle())
                 .seller(seller)
+                .isActive(true)
                 .coverImage(request.getCoverImage())
                 .metaDescription(request.getMetaDescription())
                 .warrantyInfo(request.getWarrantyInfo())
@@ -96,6 +97,7 @@ public class ProductService {
             ProductVariant productVariant = ProductVariant.builder()
                     .sku(variantRequest.getSku())
                     .product(product)
+                    .isActive(true)
                     .image(variantRequest.getImage())
                     .price(variantRequest.getPrice())
                     .stock(variantRequest.getStock())
@@ -279,6 +281,29 @@ public class ProductService {
         List<ProductResponse> productResponses = products.getContent().stream()
                 .map(productMapper::toProductResponse)
                 .toList();
+
+        return PageResponse.<ProductResponse>builder()
+                .currentPage(products.getNumber() + 1) // Sử dụng 1-based index
+                .pageSize(pageable.getPageSize())
+                .totalElements(products.getTotalElements())
+                .totalPages(products.getTotalPages())
+                .data(productResponses)
+                .build();
+    }
+    public PageResponse<ProductResponse> getFiveProduct(Specification<Product> spec, int page, int size){
+        page=1;
+        size=5;
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt","purchase");
+        Pageable pageable = PageRequest.of(page - 1, size, sort);
+        Page<Product> products = (spec != null) ? productRepository.findAll(spec, pageable) : productRepository.findAll(pageable);
+
+        List<ProductResponse> productResponses = products.getContent().stream()
+                .map(product -> {
+                    if (product == null) return null;
+                    return productMapper.toProductResponse(product); // Sử dụng ProductMapper
+                })
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
 
         return PageResponse.<ProductResponse>builder()
                 .currentPage(products.getNumber() + 1) // Sử dụng 1-based index

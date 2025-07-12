@@ -54,6 +54,16 @@ public class ProductController {
                 .result(productService.getByCategory(categoryId,spec,page,size))
                 .build();
     }
+    @GetMapping("/most_purchase")
+    ApiResponse<PageResponse<ProductResponse>> getFivePr(
+            @Filter Specification<Product> spec,
+            @RequestParam(value = "page", required = false, defaultValue = "1") int page,
+            @RequestParam(value = "size", required = false, defaultValue = "10") int size)
+    {
+        return ApiResponse.<PageResponse<ProductResponse>>builder()
+                .result(productService.getAllProduct(spec, page, size))
+                .build();
+    }
     @GetMapping("/{id}")
     ApiResponse<ProductResponse> get(@PathVariable Long id) {
         return ApiResponse.<ProductResponse>builder()
