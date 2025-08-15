@@ -17,6 +17,8 @@ public class UserAddressResponse {
     Long id;
     String userId;
     String userName;
+    String name;
+    String phoneNumber;
     String city;
     String district;
     String commune;

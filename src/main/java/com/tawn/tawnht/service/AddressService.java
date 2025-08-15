@@ -47,7 +47,10 @@ public class AddressService {
                 .createdAt(LocalDateTime.now())
                 .addressType(request.getAddressType())
                 .city(request.getCity())
+                .name(request.getName())
+                .phoneNumber(request.getPhoneNumber())
                 .user(user)
+                .status("acp")
                 .commune(request.getCommune())
                 .district(request.getDistrict())
                 .isDefault(request.getIsDefault())
@@ -55,7 +58,7 @@ public class AddressService {
         return orderMapper.toUserAddressResponse(userAddressRepository.save(userAddress));
     }
     public UserAddressResponse getCurrentUserAddress(Long id){
-        UserAddress userAddress=userAddressRepository.findById(id)
+        UserAddress userAddress=userAddressRepository.findByIdAndStatus(id,"acp")
                 .orElseThrow(()->new AppException(ErrorCode.ADDRESS_NOT_FOUND));
         return orderMapper.toUserAddressResponse(userAddress);
     }
@@ -64,7 +67,7 @@ public class AddressService {
                 .orElseThrow(()->new AppException(ErrorCode.USER_NOT_EXISTED));
         User user=userRepository.findByEmail(email)
                 .orElseThrow(()->new AppException(ErrorCode.USER_NOT_EXISTED));
-        Set<UserAddress> userAddresses=user.getUserAddresses();
+        List<UserAddress> userAddresses=userAddressRepository.findAllByUserAndStatus(user,"acp");
         return  userAddresses.stream().map(orderMapper::toUserAddressResponse).toList();
     }
 }

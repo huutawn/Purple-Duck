@@ -33,6 +33,7 @@ public class Seller {
     @OneToMany(cascade = CascadeType.ALL,fetch = FetchType.LAZY,mappedBy = "seller")
             List<SubOrder> subOrders;
     String storeName;
+    @Column(columnDefinition = "TEXT")
     String storeDescription;
     String storeLogo;
     int rating;

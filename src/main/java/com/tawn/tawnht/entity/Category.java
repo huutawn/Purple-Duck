@@ -20,6 +20,7 @@ public class Category {
     Long id;
     String name;
     String description;
+    String slug;
     String image;
     Integer displayOrder;
     @OneToMany(mappedBy = "category")

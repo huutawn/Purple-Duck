@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,8 +35,9 @@ public class CartService {
      ProductVariantAttributeRepository productVariantAttributeRepository;
      UserRepository userRepository;
      CartItemRepository cartItemRepository;
+
     @Transactional
-    public CartResponse addToCart(List<AddToCartReq> items) {
+    public CartResponse addToCart(AddToCartReq items) {
         User user = userRepository.findByEmail(SecurityUtils.getCurrentUserLogin().get())
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
         String userId = user.getId();
@@ -47,7 +49,7 @@ public class CartService {
                     return cartRepository.save(newCart);
                 });
 
-        for (AddToCartReq itemRequest : items) {
+        AddToCartReq itemRequest=items;
             List<Long> attributeValueIds = itemRequest.getAttributeValueIds();
             Integer quantity = itemRequest.getQuantity();
             Long productId = itemRequest.getProductId(); // Lấy productId
@@ -77,38 +79,49 @@ public class CartService {
                     });
 
             cartItem.getVariantQuantities().put(variant, quantity);
-        }
+
 
         cartRepository.save(cart);
         return mapToCartResponse(cart);
     }
 
     private ProductVariant findMatchingVariant(Long productId, List<Long> attributeValueIds) {
+        // 1. Lấy tất cả các biến thể của sản phẩm, đảm bảo các thuộc tính được load
+        // RẤT QUAN TRỌNG: Đảm bảo findByProductIdWithAttributes(productId) tải eager các ProductVariantAttributes và ProductAttributeValue
         List<ProductVariant> variants = variantRepository.findByProductIdWithAttributes(productId);
-        if (variants == null || variants.isEmpty()) return null;
 
-        List<ProductVariantAttribute> attributes = variants.stream()
-                .flatMap(v -> v.getProductVariantAttributes().stream())
-                .filter(attr -> attributeValueIds.contains(attr.getProductAttributeValue().getId()))
-                .collect(Collectors.toList());
-
-        if (attributes.size() != attributeValueIds.size()) {
-            log.warn("Mismatch in attribute count: expected {}, got {}", attributeValueIds.size(), attributes.size());
+        if (variants == null || variants.isEmpty()) {
+            log.warn("No variants found for productId: {}", productId);
             return null;
         }
 
-        Map<Long, List<ProductVariantAttribute>> groupedByVariant = attributes.stream()
-                .collect(Collectors.groupingBy(attr -> attr.getProductVariant().getId()));
+        // Chuyển List<Long> attributeValueIds thành Set<Long> để so sánh hiệu quả hơn
+        Set<Long> requestedAttributeValueSet = new HashSet<>(attributeValueIds);
 
-        for (Map.Entry<Long, List<ProductVariantAttribute>> entry : groupedByVariant.entrySet()) {
-            Set<Long> variantAttributeIds = entry.getValue().stream()
-                    .map(attr -> attr.getProductAttributeValue().getId())
+        // 2. Duyệt qua từng biến thể để tìm biến thể khớp
+        for (ProductVariant variant : variants) {
+            // Lấy tất cả các ProductAttributeValue IDs của biến thể hiện tại
+            Set<Long> variantAttributeValueSet = variant.getProductVariantAttributes().stream()
+                    .map(ProductVariantAttribute::getProductAttributeValue) // Lấy ProductAttributeValue
+                    .map(ProductAttributeValue::getId) // Lấy ID của ProductAttributeValue
                     .collect(Collectors.toSet());
-            if (variantAttributeIds.containsAll(attributeValueIds)) {
-                return variantRepository.findById(entry.getKey())
-                        .orElse(null);
+
+            // Kiểm tra xem tập hợp các thuộc tính của biến thể hiện tại
+            // có khớp HOÀN TOÀN với tập hợp các thuộc tính yêu cầu hay không.
+            // Điều kiện:
+            // a) Kích thước của hai tập hợp phải bằng nhau (số lượng thuộc tính khớp)
+            // b) Tập hợp các thuộc tính của biến thể phải chứa TẤT CẢ các thuộc tính yêu cầu
+            if (variantAttributeValueSet.size() == requestedAttributeValueSet.size() &&
+                    variantAttributeValueSet.containsAll(requestedAttributeValueSet)) {
+
+                // Nếu tìm thấy biến thể khớp, trả về nó
+                log.info("Found matching variant ID: {} for productId: {}, attributeValueIds: {}", variant.getId(), productId, attributeValueIds);
+                return variant;
             }
         }
+
+        // Nếu không tìm thấy biến thể nào khớp sau khi duyệt qua tất cả
+        log.warn("No matching variant found for productId: {}, attributeValueIds: {}", productId, attributeValueIds);
         return null;
     }
 
@@ -136,6 +149,7 @@ public class CartService {
 
                     CartItemResponse.VariantQuantity variantQty = new CartItemResponse.VariantQuantity();
                     variantQty.setVariantId(variant.getId());
+                    variantQty.setProductId(variant.getProduct().getId());
                     variantQty.setProductName(variant.getProduct().getName());
                     variantQty.setPrice(variant.getPrice());
                     variantQty.setStock(variant.getStock());
@@ -146,7 +160,7 @@ public class CartService {
                                 AttributeResponse attrRes = new AttributeResponse();
                                 ProductAttributeValue selectedValue = attr.getProductAttributeValue();
                                 attrRes.setAttributeId(selectedValue.getProductAttribute().getId());
-                                attrRes.setAttributeName(selectedValue.getProductAttribute().getDisplayName());
+                                attrRes.setAttributeName(selectedValue.getProductAttribute().getName());
 
                                 // Chỉ lấy giá trị đã chọn, không lấy tất cả từ ProductAttributeValues
                                 AttributeValueResponse valueRes = new AttributeValueResponse();
@@ -172,6 +186,7 @@ public class CartService {
         Cart cart = cartRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
         List<CartItem> cartItems = cartItemRepository.findAllByCartId(cart.getId());
+        log.info("GET CART {}",cartItems);
         return cartItems.stream().map(this::mapToCartItemResponse).collect(Collectors.toList());
     }
 }

@@ -35,7 +35,7 @@ public class Order {
     String couponCode;
     String status;
     String paymentMethod;
-    @OneToOne
+    @ManyToOne
     UserAddress userAddress;
 
     @OneToMany(mappedBy = "order",cascade = CascadeType.ALL,fetch = FetchType.LAZY,orphanRemoval = true)
@@ -46,5 +46,6 @@ public class Order {
     LocalDate estimatedDeliveryDate;
     @Column(columnDefinition = "TEXT")
     String note;
+    String QRCode;
     LocalDateTime createdAt;
 }

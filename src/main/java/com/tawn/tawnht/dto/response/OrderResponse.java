@@ -34,6 +34,7 @@ public class OrderResponse {
     String trackingNumber;
     String shippingCarrier;
     LocalDate estimatedDeliveryDate;
+    String QRCode;
     String note;
     LocalDateTime createdAt;
 }

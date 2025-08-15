@@ -5,6 +5,7 @@ import lombok.*;
 import lombok.experimental.FieldDefaults;
 
 import java.time.LocalDateTime;
+import java.util.Set;
 
 @Getter
 @Setter
@@ -20,13 +21,16 @@ public class UserAddress {
     Long id;
     @ManyToOne
     User user;
-    @OneToOne(mappedBy = "userAddress",fetch = FetchType.LAZY)
-            Order order;
+    @OneToMany(mappedBy = "userAddress",fetch = FetchType.LAZY)
+    Set<Order> orders;
     String city;
     String district;
     String commune;
+    String status;
     String address;
     Boolean isDefault;
     String addressType;
+    String phoneNumber;
+    String name;
     LocalDateTime createdAt;
 }

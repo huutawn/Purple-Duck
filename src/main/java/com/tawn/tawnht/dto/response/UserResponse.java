@@ -17,6 +17,7 @@ public class UserResponse {
     String email;
     String firstName;
     String lastName;
+    String picture;
     String tokenVerify;
     Boolean isVerified;
     LocalDateTime timeCreateToken;

@@ -1,12 +1,16 @@
 package com.tawn.tawnht.service;
 
+
+import com.tawn.tawnht.document.ProductDocument;
+import com.tawn.tawnht.document.ProductElasticsearchRepository;
 import com.tawn.tawnht.dto.request.OrderCreationRequest;
 import com.tawn.tawnht.dto.request.OrderItemRequest;
 import com.tawn.tawnht.dto.request.SetStatusOrderReq;
+import com.tawn.tawnht.dto.request.StartOrderReq;
 import com.tawn.tawnht.dto.response.OrderResponse;
 import com.tawn.tawnht.dto.response.PageResponse;
 import com.tawn.tawnht.dto.response.SubOrderResponse;
-import com.tawn.tawnht.dto.response.UserAddressResponse;
+
 import com.tawn.tawnht.entity.*;
 import com.tawn.tawnht.exception.AppException;
 import com.tawn.tawnht.exception.ErrorCode;
@@ -24,6 +28,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -48,46 +53,36 @@ public class OrderService {
     UserAddressRepository userAddressRepository;
     SellerRepository sellerRepository;
     OrderMapper orderMapper;
-
+    ProductElasticsearchRepository productElasticsearchRepository;
 
     public OrderResponse createOrder(OrderCreationRequest request){
         String email = SecurityUtils.getCurrentUserLogin().get();
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
 
-        UserAddress address = userAddressRepository.findById(request.getShippingAddressId())
-                .orElseThrow(() -> new AppException(ErrorCode.ADDRESS_NOT_FOUND));
-        if (!address.getUser().getId().equals(user.getId())) {
-            throw new AppException(ErrorCode.UNAUTHORIZED);
-        }
+        UserAddress userAddress=UserAddress.builder()
+                .status("non")
+                .user(user)
+                .build();
+        userAddressRepository.saveAndFlush(userAddress);
+        Set<UserAddress> userAddresses=new HashSet<>();
+        userAddresses.add(userAddress);
+        user.setUserAddresses(userAddresses);
+        userRepository.saveAndFlush(user);
+
 
         log.info("is from cart: "+request.isFromCart()+"");
-        List<OrderItemRequest> items;
-        if (request.isFromCart()) {
-            Cart cart = cartRepository.findByUserId(user.getId())
-                    .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
-            log.info("cart id: "+cart.getId()+"");
-            items = cart.getCartItems().stream()
-                    .flatMap(item -> item.getVariantQuantities().entrySet().stream()
-                            .map(entry -> {
-                                ProductVariant variant = entry.getKey();
-                                log.info("product var   iant id: "+variant.getId()+"");
-                                Integer quantity = entry.getValue();
-                                OrderItemRequest req = new OrderItemRequest();
-                                req.setProductId(variant.getProduct().getId());
-                                req.setAttributeValueIds(variant.getProductVariantAttributes().stream()
-                                        .map(attr -> attr.getProductAttributeValue().getId())
-                                        .collect(Collectors.toList()));
-                                req.setQuantity(quantity);
-                                return req;
-                            }))
-                    .collect(Collectors.toList());
-        } else {
-            items = request.getItems();
+
+        // LUÔN LUÔN lấy danh sách các item từ request.getItems()
+        List<OrderItemRequest> itemsToProcess = request.getItems();
+
+        // Thêm kiểm tra an toàn: đảm bảo danh sách item không rỗng
+        if (itemsToProcess == null || itemsToProcess.isEmpty()) {
+            throw new AppException(ErrorCode.ORDER_ITEMS_EMPTY); // Cần định nghĩa ErrorCode này
         }
 
         List<ItemInfo> itemInfos = new ArrayList<>();
-        for (OrderItemRequest item : items) {
+        for (OrderItemRequest item : itemsToProcess) {
             Long variantId = getVariantId(item.getProductId(), item.getAttributeValueIds());
             ProductVariant variant = productVariantRepository.findById(variantId)
                     .orElseThrow(() -> new AppException(ErrorCode.PRODUCT_NOT_FOUND));
@@ -98,28 +93,29 @@ public class OrderService {
             itemInfos.add(new ItemInfo(variantId, variant.getProduct().getSeller().getId(), item.getQuantity(), variant.getPrice()));
         }
 
-
         Map<Long, List<ItemInfo>> itemsBySeller = itemInfos.stream()
                 .collect(Collectors.groupingBy(ItemInfo::getSellerId));
 
         BigDecimal totalAmount = calculateTotalAmount(itemInfos);
+
         Order order = Order.builder()
                 .user(user)
                 .totalAmount(totalAmount)
-                .shippingFee(BigDecimal.ZERO) // Tính sau
+                .shippingFee(BigDecimal.ZERO)
                 .taxAmount(BigDecimal.ZERO)
                 .discountAmount(BigDecimal.ZERO)
                 .couponCode(request.getCouponCode())
                 .status("init")
                 .paymentMethod(request.getPaymentMethod())
-                .userAddress(address)
+                .userAddress(userAddress)
                 .note(request.getNotes())
                 .createdAt(LocalDateTime.now())
                 .build();
         order=orderRepository.save(order);
         log.info("order id: "+order.getId());
+
         List<SubOrder> subOrders=new ArrayList<>();
-        Set<OrderItem> orderItems=new HashSet<>();
+        Set<OrderItem> orderItems=new HashSet<>(); // Đây là Set của OrderItem, không phải CartItem
         for (Map.Entry<Long, List<ItemInfo>> entry : itemsBySeller.entrySet()) {
             Long sellerId = entry.getKey();
             log.info("seller id: "+sellerId+"");
@@ -129,7 +125,7 @@ public class OrderService {
                     .order(order)
                     .seller(sellerRepository.findById(sellerId)
                             .orElseThrow(() -> new AppException(ErrorCode.SELLER_NOT_FOUND)))
-                    .status("pending")
+                    .status("init")
                     .createdAt(LocalDateTime.now())
                     .build();
             subOrder=subOrderRepository.save(subOrder);
@@ -145,25 +141,63 @@ public class OrderService {
                         .price(variant.getPrice())
                         .build();
                 log.info("variant price: "+variant.getPrice());
-               orderItem= orderItemRepository.save(orderItem);
-               orderItems.add(orderItem);
+                orderItem= orderItemRepository.save(orderItem);
+                orderItems.add(orderItem);
                 variant.setStock(variant.getStock() - item.getQuantity());
-               variant= productVariantRepository.save(variant);
+                variant= productVariantRepository.save(variant);
             }
             subOrder.setOrderItems(orderItems);
             subOrders.add(subOrder);
         }
         order.setSubOrders(subOrders);
-//
 
+        // Logic mới: Xóa các CartItem đã chọn khỏi giỏ hàng nếu fromCart là true
         if (request.isFromCart()) {
-            Cart cart = cartRepository.findByUserId(user.getId()).get();
-            cart.getCartItems().clear();
-            cart=cartRepository.save(cart);
+            Cart cart = cartRepository.findByUserId(user.getId())
+                    .orElseThrow(() -> new AppException(ErrorCode.CART_NOT_FOUND));
+
+            // 1. Lấy tất cả ProductVariant IDs cần xóa khỏi giỏ hàng
+            Set<Long> variantIdsToRemove = itemsToProcess.stream()
+                    .map(itemRequest -> getVariantId(itemRequest.getProductId(), itemRequest.getAttributeValueIds()))
+                    .collect(Collectors.toSet());
+
+            // 2. Duyệt qua từng CartItem trong giỏ hàng của người dùng
+            // Sử dụng Iterator để có thể xóa phần tử an toàn trong khi lặp
+            Iterator<CartItem> cartItemIterator = cart.getCartItems().iterator();
+            while (cartItemIterator.hasNext()) {
+                CartItem cartItem = cartItemIterator.next();
+                Map<ProductVariant, Integer> currentVariantQuantities = cartItem.getVariantQuantities();
+
+                // Tạo một Map mới để chứa các biến thể còn lại sau khi xóa
+                Map<ProductVariant, Integer> updatedVariantQuantities = new HashMap<>();
+
+                // Duyệt qua từng cặp ProductVariant-quantity trong CartItem hiện tại
+                for (Map.Entry<ProductVariant, Integer> entry : currentVariantQuantities.entrySet()) {
+                    ProductVariant variantInCart = entry.getKey();
+                    Integer quantityInCart = entry.getValue();
+
+                    // Nếu biến thể này KHÔNG nằm trong danh sách cần xóa, giữ lại nó
+                    if (!variantIdsToRemove.contains(variantInCart.getId())) {
+                        updatedVariantQuantities.put(variantInCart, quantityInCart);
+                    }
+                }
+
+                // Cập nhật lại Map variantQuantities của CartItem
+                cartItem.setVariantQuantities(updatedVariantQuantities);
+
+                // Nếu sau khi cập nhật, CartItem này không còn biến thể nào, xóa CartItem đó khỏi giỏ hàng
+                if (updatedVariantQuantities.isEmpty()) {
+                    cartItemIterator.remove(); // Xóa CartItem khỏi Set cartItems của Cart
+                    // Nếu CartItem là một entity riêng biệt và có thể cần xóa khỏi DB
+                    // cartItemRepository.delete(cartItem); // Chỉ xóa nếu CartItem không tự động bị xóa khi không còn liên kết
+                }
+            }
+
+            // Lưu lại giỏ hàng đã cập nhật (với các CartItem đã sửa đổi hoặc đã xóa)
+            cartRepository.save(cart);
         }
         log.info("totalAmount: "+totalAmount);
         return orderMapper.toOrderResponse(order);
-
     }
     public Long getVariantId(Long productId, List<Long> attributeValueIds) {
 
@@ -232,8 +266,27 @@ public class OrderService {
                 .totalPages(subOrders.getTotalPages())
                 .build();
     }
+    public PageResponse<OrderResponse> getAll(Specification<Order> spec,int page, int size){
+        String email=SecurityUtils.getCurrentUserLogin().orElseThrow(
+                ()->new AppException(ErrorCode.USER_NOT_EXISTED)
+        );
+        User user=userRepository.findByEmail(email)
+                .orElseThrow(()->new AppException(ErrorCode.USER_NOT_EXISTED));
+        Sort sort= Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable pageable = PageRequest.of(page - 1, size, sort);
+        Page<Order> orders=orderRepository.findAllByUser(user,pageable);
+        List<OrderResponse> orderResponses=orders.getContent().stream()
+                .map(orderMapper::toOrderResponse).toList();
+        return PageResponse.<OrderResponse>builder()
+                .currentPage(page)
+                .data(orderResponses)
+                .pageSize(pageable.getPageSize())
+                .totalElements(orders.getTotalElements())
+                .totalPages(orders.getTotalPages())
+                .build();
+    }
     @Transactional
-    public Void deleteOrder(Long orderId) {
+    public String deleteOrder(Long orderId) {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
 
@@ -261,24 +314,58 @@ public class OrderService {
 
         // Xóa Order
         orderRepository.delete(order);
+        return "hehe";
     }
-    public OrderResponse startOrder(Long orderId){
-       Order order=orderRepository.findById(orderId)
+    public OrderResponse startOrder(StartOrderReq req){
+       Order order=orderRepository.findById(req.getOrderId())
                 .orElseThrow(()->new AppException(ErrorCode.ORDER_NOT_FOUND));
        order.setStatus("pending");
        List<SubOrder> subOrders=order.getSubOrders();
        for(SubOrder subOrder:subOrders){
+           subOrder.setStatus("pending");
            Set<OrderItem> orderItems=subOrder.getOrderItems();
            for (OrderItem orderItem:orderItems){
                ProductVariant productVariant=orderItem.getProductVariant();
                Product product=productVariant.getProduct();
-               int purchase= product.getPurchase();;
+              Integer purchase= product.getPurchase();
+              if(purchase==null)
+                  purchase=0;
+               ProductDocument productDocument=productElasticsearchRepository.findById(product.getId()+"")
+                               .orElseThrow(()->new AppException(ErrorCode.PRODUCT_NOT_FOUND));
+               Integer purchaseDoc=productDocument.getPurchase();
+               if(purchaseDoc==null)
+                   purchaseDoc=0;
+               productDocument.setPurchase(purchaseDoc+orderItem.getQuantity());
+               productElasticsearchRepository.save(productDocument);
                product.setPurchase(purchase+orderItem.getQuantity());
                productRepository.save(product);
            }
        }
+        UserAddress userAddress=userAddressRepository.findById(req.getAddressId())
+                .orElseThrow(()->new AppException(ErrorCode.ADDRESS_NOT_FOUND));
+       order.setUserAddress(userAddress);
+       if(req.getIsQR()){
+
+           //QR
+       }
+       order.setNote(req.getNote());
+       order.setSubOrders(subOrders);
+
        order=orderRepository.save(order);
        return orderMapper.toOrderResponse(order);
+    }
+    public OrderResponse getInit(){
+        User user=userRepository.findByEmail(SecurityUtils.getCurrentUserLogin().get())
+                .orElseThrow(()->new AppException(ErrorCode.USER_NOT_EXISTED));
+        Order order= orderRepository.findFirstByUserAndStatusOrderByCreatedAtDesc(user,"init")
+                .orElseThrow(()->new AppException(ErrorCode.ORDER_NOT_FOUND));
+        return orderMapper.toOrderResponse(order);
+    }
+    @PreAuthorize("isAuthenticated()")
+    public OrderResponse getDetail(Long id){
+        Order order=orderRepository.findById(id)
+                .orElseThrow(()->new AppException(ErrorCode.ORDER_NOT_FOUND));
+        return orderMapper.toOrderResponse(order);
     }
 
     public SubOrderResponse setStatus(SetStatusOrderReq req){

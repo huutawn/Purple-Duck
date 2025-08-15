@@ -22,4 +22,6 @@ public class AddressCreationRequest {
     String address;
     Boolean isDefault;
     String addressType;
+    String phoneNumber;
+    String Name;
 }

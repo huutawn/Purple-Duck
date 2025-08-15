@@ -22,11 +22,13 @@ public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     String id;
+
     String email;
     @JsonIgnore
     String password;
     String firstName;
     LocalDate dob;
+    String picture;
     String lastName;
     String tokenVerify;
     Boolean isVerified;
@@ -34,7 +36,7 @@ public class User {
 
     @ManyToMany
     Set<Role> roles;
-    @OneToMany(cascade = CascadeType.ALL,mappedBy = "user",orphanRemoval = true,fetch = FetchType.LAZY)
+    @OneToMany(cascade = CascadeType.ALL,mappedBy = "user",fetch = FetchType.LAZY)
     Set<UserAddress> userAddresses;
     @OneToOne(cascade = CascadeType.ALL,mappedBy = "user",fetch = FetchType.LAZY,orphanRemoval = true)
     Cart cart;

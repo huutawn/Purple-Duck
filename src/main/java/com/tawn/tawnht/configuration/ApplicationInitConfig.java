@@ -60,10 +60,22 @@ public class ApplicationInitConfig {
                         .roles(roles)
                         .build();
 
+                User user1 = User.builder()
+                        .email("admin@adm.ppd.com")
+                        .password(passwordEncoder.encode(ADMIN_PASSWORD))
+                        .roles(roles)
+                        .build();
                 userRepository.save(user);
+                userRepository.save(user1);
 
 
                 log.warn("admin user has been created with default password: admin, please change the password");
+            }
+            if(!roleRepository.existsByName(PredefinedRole.SELLER_ROLE)){
+                roleRepository.save(Role.builder()
+                        .name(PredefinedRole.SELLER_ROLE)
+                        .description("Seller role")
+                        .build());
             }
 
         };

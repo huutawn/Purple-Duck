@@ -3,6 +3,7 @@ package com.tawn.tawnht.repository.jpa;
 import com.tawn.tawnht.entity.Category;
 import com.tawn.tawnht.entity.Product;
 import com.tawn.tawnht.entity.ProductVariant;
+import com.tawn.tawnht.entity.Seller;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -27,8 +28,8 @@ public interface ProductRepository extends JpaRepository<Product,Long>, JpaSpeci
             "LEFT JOIN FETCH p.images " +
             "WHERE p.id = :id")
     Optional<Product> findProductById(@Param("id") Long id);
-    Optional<Product> findByProductVariant(ProductVariant productVariant);
     Page<Product> findAllByCategory(Pageable pageable, Category category);
+    Page<Product> findAllBySeller(Pageable pageable, Seller seller);
     @Modifying
     @Query("DELETE FROM Product")
     void deleteAllProducts();

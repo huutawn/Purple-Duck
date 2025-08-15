@@ -25,7 +25,9 @@ public class SecurityConfig {
         "/users", "/auth/token", "/auth/introspect", "/auth/logout", "/auth/refresh","/category","/products","/v3/api-docs/**","v3/api/docs",
             "/swagger-ui/**",
             "/swagger-ui.html",
-            "/products/**"
+            "/products/**",
+            "/auth/outbound/authentication",
+            "/products/search"
     };
 
     private final CustomJwtDecoder customJwtDecoder;

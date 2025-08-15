@@ -1,0 +1,83 @@
+# docker-compose.yml
+version: '3.8'
+
+services:
+  # PostgreSQL (giữ nguyên)
+  postgres:
+    image: postgres:14.17
+    container_name: postgresql
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: huutawn1412
+      POSTGRES_DB: t3
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d t2"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Elasticsearch (downgrade sang 8.14.1, bật security)
+  elasticsearch:
+    image: elasticsearch:8.14.1 # Downgrade để tương thích Spring Boot 3.4.5
+    container_name: my-elasticsearch
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - ELASTIC_PASSWORD=huutanelastic1412 # Password cho user 'elastic'
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    volumes:
+      - es_data:/usr/share/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f -u elastic:huutanelastic1412 http://localhost:9200/_cat/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # Kibana (downgrade sang 8.14.1)
+  kibana:
+    image: kibana:8.14.1 # Phiên bản khớp ES
+    container_name: my-kibana
+    ports:
+      - "5601:5601"
+    environment:
+      ELASTICSEARCH_HOSTS: '["http://elasticsearch:9200"]'
+      ELASTICSEARCH_USERNAME: elastic
+      ELASTICSEARCH_PASSWORD: huutanelastic1412
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+
+#   App Spring Boot (cấu hình kết nối ES với auth)
+#  app:
+#    build: .
+#    container_name: my-spring-boot-app
+#    ports:
+#      - "8080:8080"
+#    depends_on:
+#      postgres:
+#        condition: service_healthy
+#      elasticsearch:
+#        condition: service_healthy
+#    environment:
+#      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/t2
+#      SPRING_DATASOURCE_USERNAME: postgres
+#      SPRING_DATASOURCE_PASSWORD: huutawn1412
+#      SPRING_ELASTICSEARCH_URIS: http://elasticsearch:9200
+#      SPRING_ELASTICSEARCH_USERNAME: elastic
+#      SPRING_ELASTICSEARCH_PASSWORD: huutanelastic1412
+
+volumes:
+  pgdata:
+  es_data:

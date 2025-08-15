@@ -28,8 +28,24 @@ public class OrderController {
                 .result(orderService.createOrder(request))
                 .build();
     }
+    @GetMapping("/{id}")
+    ApiResponse<OrderResponse> getDetail(@PathVariable Long id)  {
+        return ApiResponse.<OrderResponse>builder()
+                .result(orderService.getDetail(id))
+                .build();
+    }
     @GetMapping
-    ApiResponse<PageResponse<SubOrderResponse>> getAll(
+    ApiResponse<PageResponse<OrderResponse>> getAll(
+            @Filter Specification<Order> spec,
+            @RequestParam(value = "page", required = false, defaultValue = "1") int page,
+            @RequestParam(value = "size", required = false, defaultValue = "10") int size)
+    {
+        return ApiResponse.<PageResponse<OrderResponse>>builder()
+                .result(orderService.getAll(spec, page, size))
+                .build();
+    }
+    @GetMapping("/seller")
+    ApiResponse<PageResponse<SubOrderResponse>> getAllBySeller(
             @Filter Specification<Order> spec,
             @RequestParam(value = "page", required = false, defaultValue = "1") int page,
             @RequestParam(value = "size", required = false, defaultValue = "10") int size)
@@ -39,15 +55,21 @@ public class OrderController {
                 .build();
     }
     @DeleteMapping("/{orderId}")
-    ApiResponse<Void> delete(@PathVariable  Long orderId)  {
-        return ApiResponse.<Void>builder()
+    ApiResponse<String> delete(@PathVariable  Long orderId)  {
+        return ApiResponse.<String>builder()
                 .result(orderService.deleteOrder(orderId))
                 .build();
     }
-    @PatchMapping("/{orderId}")
-    ApiResponse<OrderResponse> startOrder(@PathVariable Long orderId)  {
+    @PatchMapping("/start")
+    ApiResponse<OrderResponse> startOrder(@RequestBody StartOrderReq req)  {
         return ApiResponse.<OrderResponse>builder()
-                .result(orderService.startOrder(orderId))
+                .result(orderService.startOrder(req))
+                .build();
+    }
+    @GetMapping("/init")
+    ApiResponse<OrderResponse> getInit()  {
+        return ApiResponse.<OrderResponse>builder()
+                .result(orderService.getInit())
                 .build();
     }
     @PatchMapping

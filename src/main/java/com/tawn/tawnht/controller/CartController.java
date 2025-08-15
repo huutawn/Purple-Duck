@@ -23,7 +23,7 @@ import java.util.List;
 public class CartController {
     CartService cartService;
     @PostMapping
-    ApiResponse<CartResponse> create(@RequestBody List<AddToCartReq> items)  {
+    ApiResponse<CartResponse> create(@RequestBody AddToCartReq items)  {
         return ApiResponse.<CartResponse>builder()
                 .result(cartService.addToCart(items))
                 .build();

@@ -1,12 +1,15 @@
 package com.tawn.tawnht.service;
 
+import com.tawn.tawnht.constant.PredefinedRole;
 import com.tawn.tawnht.dto.request.SellerCreationRequest;
 import com.tawn.tawnht.dto.response.SellerResponse;
+import com.tawn.tawnht.entity.Role;
 import com.tawn.tawnht.entity.Seller;
 import com.tawn.tawnht.entity.User;
 import com.tawn.tawnht.exception.AppException;
 import com.tawn.tawnht.exception.ErrorCode;
 import com.tawn.tawnht.mapper.SellerMapper;
+import com.tawn.tawnht.repository.jpa.RoleRepository;
 import com.tawn.tawnht.repository.jpa.SellerRepository;
 import com.tawn.tawnht.repository.jpa.UserRepository;
 import com.tawn.tawnht.utils.SecurityUtils;
@@ -17,6 +20,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -30,6 +35,7 @@ public class SellerService {
     CloudinaryService cloudinaryService;
     UserRepository userRepository;
     SellerMapper sellerMapper;
+    RoleRepository roleRepository;
     public void requestVerify(String email,String token){
         String htmlMail = "<!DOCTYPE html>\n" +
                 "<html>\n" +
@@ -94,6 +100,9 @@ public class SellerService {
         User user=userRepository.findByEmail(email)
                 .orElseThrow(()->new AppException(ErrorCode.USER_NOT_EXISTED));
         String url=request.getStoreLogo();
+        HashSet<Role> roles = new HashSet<>();
+       roleRepository.findById(PredefinedRole.SELLER_ROLE).ifPresent(roles::add);
+        user.setRoles(roles);
         Seller seller=Seller.builder()
                 .createdAt(LocalDateTime.now())
                 .isVerified(false)
@@ -105,6 +114,8 @@ public class SellerService {
                 .user(user)
                 .build();
         seller=sellerRepository.save(seller);
+        user.setSeller(seller);
+        userRepository.save(user);
         requestVerify(email,seller.getVerifyToken());
         return sellerMapper.toSellerResponse(seller);
     }

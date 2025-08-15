@@ -54,11 +54,21 @@ public class ProductController {
                 .result(productService.getByCategory(categoryId,spec,page,size))
                 .build();
     }
+    @GetMapping("/search")
+    ApiResponse<PageResponse<ProductResponse>> search(
+            @RequestParam(value = "keyword") String keyword,
+            @RequestParam(value = "page", required = false, defaultValue = "1") int page,
+            @RequestParam(value = "size", required = false, defaultValue = "10") int size)
+    {
+        return ApiResponse.<PageResponse<ProductResponse>>builder()
+                .result(productService.search(keyword, page, size))
+                .build();
+    }
     @GetMapping("/most_purchase")
     ApiResponse<PageResponse<ProductResponse>> getFivePr(
             @Filter Specification<Product> spec,
             @RequestParam(value = "page", required = false, defaultValue = "1") int page,
-            @RequestParam(value = "size", required = false, defaultValue = "10") int size)
+            @RequestParam(value = "size", required = false, defaultValue = "16") int size)
     {
         return ApiResponse.<PageResponse<ProductResponse>>builder()
                 .result(productService.getAllProduct(spec, page, size))
@@ -70,5 +80,20 @@ public class ProductController {
                 .result(productService.getProductById(id))
                 .build();
     }
-
+    @GetMapping("/mySeller")
+    ApiResponse<PageResponse<ProductResponse>> getAllBySeller(
+            @Filter Specification<Product> spec,
+            @RequestParam(value = "page", required = false, defaultValue = "1") int page,
+            @RequestParam(value = "size", required = false, defaultValue = "10") int size)
+    {
+        return ApiResponse.<PageResponse<ProductResponse>>builder()
+                .result(productService.getAllBySeller(spec, page, size))
+                .build();
+    }
+    @DeleteMapping("/{id}")
+    ApiResponse<String> deleted(Long id) {
+        return ApiResponse.<String>builder()
+                .result(productService.deleteProduct(id))
+                .build();
+    }
 }

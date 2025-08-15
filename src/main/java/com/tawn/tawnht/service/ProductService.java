@@ -1,5 +1,8 @@
 package com.tawn.tawnht.service;
 
+
+import com.tawn.tawnht.document.ProductDocument;
+import com.tawn.tawnht.document.ProductElasticsearchRepository;
 import com.tawn.tawnht.dto.request.AttributeRequest;
 import com.tawn.tawnht.dto.request.AttributeValueRequest;
 import com.tawn.tawnht.dto.request.ProductCreationRequest;
@@ -15,20 +18,20 @@ import com.tawn.tawnht.utils.SecurityUtils;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @FieldDefaults(level = AccessLevel.PRIVATE,makeFinal = true)
@@ -37,12 +40,10 @@ public class ProductService {
     CategoryRepository categoryRepository;
     UserRepository userRepository;
     SellerRepository sellerRepository;
-    ProductVariantRepository productVariantRepository;
     ProductAttributeRepository productAttributeRepository;
     ProductAttributeValueRepository productAttributeValueRepository;
-    ProductImageRepository productImageRepository;
     ProductMapper productMapper;
-    ProductVariantAttributeRepository productVariantAttributeRepository;
+    ProductElasticsearchRepository productElasticsearchRepository;
     @Transactional
     public ProductResponse createProduct(ProductCreationRequest request) {
         // Kiểm tra dữ liệu đầu vào
@@ -176,6 +177,9 @@ public class ProductService {
                         .build())
                 .collect(Collectors.toList());
 
+        ProductDocument productDocument=productMapper.toDocument(product);
+        productElasticsearchRepository.save(productDocument);
+        log.info("productDocument: {}", productDocument);
         // Tạo response
         return ProductResponse.builder()
                 .id(product.getId())
@@ -187,7 +191,6 @@ public class ProductService {
                 .metaDescription(product.getMetaDescription())
                 .coverImage(product.getCoverImage())
                 .warrantyInfo(product.getWarrantyInfo())
-                .createdAt(product.getCreatedAt())
                 .sellerId(product.getSeller().getId())
                 .productVariants(productVariantResponses)
                 .images(productImageResponses)
@@ -236,7 +239,6 @@ public class ProductService {
                 .metaDescription(product.getMetaDescription())
                 .coverImage(product.getCoverImage())
                 .warrantyInfo(product.getWarrantyInfo())
-                .createdAt(product.getCreatedAt())
                 .categoryId(product.getCategory().getId())
                 .sellerId(product.getSeller().getId())
                 .images(product.getImages().stream()
@@ -312,6 +314,47 @@ public class ProductService {
                 .totalPages(products.getTotalPages())
                 .data(productResponses)
                 .build();
+    }
+    public PageResponse<ProductResponse> getAllBySeller(Specification<Product> spec, int page, int size) {
+        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt");
+        Pageable pageable = PageRequest.of(page - 1, size, sort);
+        User user=userRepository.findByEmail(SecurityUtils.getCurrentUserLogin().get())
+                .orElseThrow(()->new AppException(ErrorCode.USER_NOT_EXISTED));
+        Seller seller=user.getSeller();
+        log.info("seller id:"+seller.getId());
+        Page<Product> products = productRepository.findAllBySeller(pageable,seller); // Giả định phương thức này
+        List<ProductResponse> productResponses = products.getContent().stream()
+                .map(productMapper::toProductResponse)
+                .toList();
+
+        return PageResponse.<ProductResponse>builder()
+                .currentPage(products.getNumber() + 1) // Sử dụng 1-based index
+                .pageSize(pageable.getPageSize())
+                .totalElements(products.getTotalElements())
+                .totalPages(products.getTotalPages())
+                .data(productResponses)
+                .build();
+    }
+    public PageResponse<ProductResponse> search(String keyword,int page,int size){
+        Sort sort = Sort.by(Sort.Direction.DESC, "purchase","createdAt");
+        Pageable pageable = PageRequest.of(page - 1, size, sort);
+
+        Page<ProductDocument> productDocuments=productElasticsearchRepository.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(keyword,keyword,pageable);// Giả định phương thức này
+        List<ProductResponse> productResponses = productDocuments.getContent().stream()
+                .map(productMapper::toProductResponse)
+                .toList();
+
+        return PageResponse.<ProductResponse>builder()
+                .currentPage(productDocuments.getNumber() + 1) // Sử dụng 1-based index
+                .pageSize(pageable.getPageSize())
+                .totalElements(productDocuments.getTotalElements())
+                .totalPages(productDocuments.getTotalPages())
+                .data(productResponses)
+                .build();
+    }
+    public String deleteProduct(Long id){
+        productRepository.deleteById(id);
+        return "deleted";
     }
 
 }

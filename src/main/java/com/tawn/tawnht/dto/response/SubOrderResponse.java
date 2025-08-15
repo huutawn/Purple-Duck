@@ -19,6 +19,7 @@ public class SubOrderResponse {
     private String userName;
     private String status;
     private List<OrderItemResponse> orderItems;
+    private UserAddressResponse address;
     private BigDecimal subTotal;
     private LocalDateTime createdAt;
 }

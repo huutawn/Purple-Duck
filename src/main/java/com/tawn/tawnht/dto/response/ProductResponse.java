@@ -14,6 +14,7 @@ import java.util.List;
 public class ProductResponse {
     Long id;
     Long categoryId;
+    String categoryName;
     Long sellerId;
     String name;
     String description;
@@ -24,7 +25,6 @@ public class ProductResponse {
     Integer purchase;
     String metaDescription;
     String warrantyInfo;
-    LocalDateTime createdAt;
     boolean isActive;
     List<ProductVariantResponse> productVariants;
 

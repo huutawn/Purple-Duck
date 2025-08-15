@@ -31,7 +31,8 @@ public class CartItemResponse {
     @Data
     public static class VariantQuantity {
         private Long variantId; // ID của ProductVariant
-        private String productName; // Tên sản phẩm từ Product
+        private String productName;
+        private Long productId;// Tên sản phẩm từ Product
         private BigDecimal price; // Giá của biến thể
         private Integer stock; // Số lượng tồn kho
         private String image; // Link ảnh

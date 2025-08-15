@@ -1,8 +1,13 @@
 server:
   port: 8080
-
+  servlet:
+    context-path: /api
 
 spring:
+  elasticsearch:
+    uris: http://localhost:9200
+    username: elastic
+    password: huutanelastic1412
   mail:
     host: smtp.gmail.com
     port: 587
@@ -15,7 +20,7 @@ spring:
           starttls:
             enable: true
   datasource:
-    url: jdbc:postgresql://localhost:5432/t2
+    url: jdbc:postgresql://localhost:5432/t5
     username: postgres
     password: huutawn1412
   jpa:
@@ -28,7 +33,10 @@ springdoc:
   swagger-ui:
     path: /swagger-ui-custom.html
     enabled: true
-
+client:
+  id: ${CLIENT_ID}
+  secret: ${CLIENT_SECRET}
+  redirect-uri: ${REDIRECT_URI}
 jwt:
   signerKey: "sDd3tkGGcBWFeKUZsqBgXGPx/dkcXehI8WcYobvUW1T7tLqgVsFHXDPotVIK2TL/"
   valid-duration: 7200 #in hours

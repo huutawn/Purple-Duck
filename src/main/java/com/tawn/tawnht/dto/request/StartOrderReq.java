@@ -8,7 +8,9 @@ import lombok.experimental.FieldDefaults;
 @AllArgsConstructor
 @Builder
 @FieldDefaults(level = AccessLevel.PRIVATE)
-public class RefreshRequest {
-    String token;
-    String refreshToken;
+public class StartOrderReq {
+    Long orderId;
+    Long addressId;
+    Boolean isQR;
+    String note;
 }
