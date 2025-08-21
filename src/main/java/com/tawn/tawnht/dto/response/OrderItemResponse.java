@@ -1,14 +1,9 @@
 package com.tawn.tawnht.dto.response;
 
-import com.tawn.tawnht.entity.Order;
-import com.tawn.tawnht.entity.ProductVariant;
-import com.tawn.tawnht.entity.SubOrder;
-import jakarta.persistence.ManyToOne;
+import java.math.BigDecimal;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.math.BigDecimal;
-import java.util.List;
 
 @Data
 @NoArgsConstructor

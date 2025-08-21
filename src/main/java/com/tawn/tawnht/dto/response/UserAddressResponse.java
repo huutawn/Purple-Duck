@@ -1,12 +1,9 @@
 package com.tawn.tawnht.dto.response;
 
-import com.tawn.tawnht.entity.User;
-import jakarta.persistence.ManyToOne;
+import java.time.LocalDateTime;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 @NoArgsConstructor

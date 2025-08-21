@@ -1,10 +1,11 @@
 package com.tawn.tawnht.entity;
 
+import java.time.LocalDateTime;
+
 import jakarta.persistence.*;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -16,12 +17,16 @@ import java.time.LocalDateTime;
 @Table(name = "seller_policy")
 public class SellerPolicy {
     @Id
-            @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
+
     @OneToOne
     Seller seller;
+
     String policyType;
+
     @Column(columnDefinition = "TEXT")
     String content;
+
     LocalDateTime createdAt;
 }

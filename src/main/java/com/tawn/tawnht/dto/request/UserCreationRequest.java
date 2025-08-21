@@ -1,11 +1,13 @@
 package com.tawn.tawnht.dto.request;
 
-import com.tawn.tawnht.validator.DobConstraint;
+import java.time.LocalDate;
+
 import jakarta.validation.constraints.Size;
+
+import com.tawn.tawnht.validator.DobConstraint;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.time.LocalDate;
 
 @Data
 @NoArgsConstructor

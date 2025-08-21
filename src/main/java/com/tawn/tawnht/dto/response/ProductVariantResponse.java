@@ -1,11 +1,10 @@
 package com.tawn.tawnht.dto.response;
 
-import com.tawn.tawnht.dto.request.AttributeValueRequest;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
-
 import java.math.BigDecimal;
 import java.util.List;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 @Data
 @NoArgsConstructor

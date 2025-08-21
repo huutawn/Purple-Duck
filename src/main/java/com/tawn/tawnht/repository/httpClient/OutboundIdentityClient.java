@@ -1,12 +1,13 @@
 package com.tawn.tawnht.repository.httpClient;
 
-import com.tawn.tawnht.dto.request.ExchangeTokenRequest;
-import com.tawn.tawnht.dto.response.ExchangeTokenResponse;
-import feign.QueryMap;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.PostMapping;
 
+import com.tawn.tawnht.dto.request.ExchangeTokenRequest;
+import com.tawn.tawnht.dto.response.ExchangeTokenResponse;
+
+import feign.QueryMap;
 
 @FeignClient(name = "outbound-identity", url = "https://oauth2.googleapis.com")
 public interface OutboundIdentityClient {

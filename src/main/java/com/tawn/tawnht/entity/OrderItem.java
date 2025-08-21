@@ -1,13 +1,11 @@
 package com.tawn.tawnht.entity;
 
+import java.math.BigDecimal;
+
 import jakarta.persistence.*;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-
 
 @Getter
 @Setter
@@ -19,12 +17,15 @@ import java.time.LocalDateTime;
 @Table(name = "order_item")
 public class OrderItem {
     @Id
-            @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
+
     @ManyToOne
     ProductVariant productVariant;
+
     @ManyToOne
-            SubOrder subOrder;
+    SubOrder subOrder;
+
     Integer quantity;
     BigDecimal price;
 }

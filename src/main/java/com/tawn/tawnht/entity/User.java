@@ -1,14 +1,16 @@
 package com.tawn.tawnht.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import jakarta.persistence.*;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Set;
+
+import jakarta.persistence.*;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 @Getter
 @Setter
@@ -24,8 +26,10 @@ public class User {
     String id;
 
     String email;
+
     @JsonIgnore
     String password;
+
     String firstName;
     LocalDate dob;
     String picture;
@@ -36,17 +40,21 @@ public class User {
 
     @ManyToMany
     Set<Role> roles;
-    @OneToMany(cascade = CascadeType.ALL,mappedBy = "user",fetch = FetchType.LAZY)
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", fetch = FetchType.LAZY)
     Set<UserAddress> userAddresses;
-    @OneToOne(cascade = CascadeType.ALL,mappedBy = "user",fetch = FetchType.LAZY,orphanRemoval = true)
+
+    @OneToOne(cascade = CascadeType.ALL, mappedBy = "user", fetch = FetchType.LAZY, orphanRemoval = true)
     Cart cart;
+
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonManagedReference
     Seller seller;
 
-    @OneToMany(cascade = CascadeType.ALL,mappedBy = "user",orphanRemoval = true,fetch = FetchType.LAZY)
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "user", orphanRemoval = true, fetch = FetchType.LAZY)
     Set<Order> orders;
-    public User(String userId){
-        this.id=userId;
+
+    public User(String userId) {
+        this.id = userId;
     }
 }

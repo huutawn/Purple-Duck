@@ -1,18 +1,17 @@
 package com.tawn.tawnht.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import jakarta.persistence.*;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
+import jakarta.persistence.*;
+
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 @Getter
 @Setter
@@ -24,28 +23,35 @@ import java.util.Set;
 @Table(name = "orders")
 public class Order {
     @Id
-            @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
+
     @ManyToOne
     User user;
+
     BigDecimal totalAmount;
     BigDecimal shippingFee;
     BigDecimal taxAmount;
     BigDecimal discountAmount;
     String couponCode;
+    String code;
     String status;
     String paymentMethod;
+
     @ManyToOne
     UserAddress userAddress;
 
-    @OneToMany(mappedBy = "order",cascade = CascadeType.ALL,fetch = FetchType.LAZY,orphanRemoval = true)
+    @OneToMany(mappedBy = "order", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
     @JsonManagedReference
-    List<SubOrder> subOrders=new ArrayList<>();
+    List<SubOrder> subOrders = new ArrayList<>();
+
     String trackingNumber;
     String shippingCarrier;
     LocalDate estimatedDeliveryDate;
+
     @Column(columnDefinition = "TEXT")
     String note;
+
     String QRCode;
     LocalDateTime createdAt;
 }

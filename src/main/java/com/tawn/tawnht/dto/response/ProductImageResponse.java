@@ -1,10 +1,9 @@
 package com.tawn.tawnht.dto.response;
 
-import jakarta.persistence.Column;
+import java.time.LocalDateTime;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.time.LocalDateTime;
 
 @Data
 @NoArgsConstructor

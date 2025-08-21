@@ -1,16 +1,13 @@
 package com.tawn.tawnht.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
-import jakarta.persistence.*;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
-
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Set;
 
+import jakarta.persistence.*;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 @Getter
 @Setter
@@ -22,8 +19,9 @@ import java.util.Set;
 @Table(name = "cart_items")
 public class CartItem {
     @Id
-            @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
+
     @ManyToOne
     Cart cart;
     // Map lưu ProductVariant và quantity
@@ -31,5 +29,6 @@ public class CartItem {
     @MapKeyJoinColumn(name = "product_variant_id")
     @Column(name = "quantity")
     private Map<ProductVariant, Integer> variantQuantities = new HashMap<>();
+
     LocalDateTime addedAt;
 }

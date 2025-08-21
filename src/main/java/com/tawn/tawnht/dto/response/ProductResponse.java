@@ -1,10 +1,9 @@
 package com.tawn.tawnht.dto.response;
 
+import java.util.List;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Data
 @NoArgsConstructor
@@ -27,6 +26,4 @@ public class ProductResponse {
     String warrantyInfo;
     boolean isActive;
     List<ProductVariantResponse> productVariants;
-
-
 }

@@ -1,5 +1,21 @@
 package com.tawn.tawnht.service;
 
+import java.text.ParseException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+import org.springframework.util.CollectionUtils;
+
+import com.nimbusds.jose.*;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 import com.tawn.tawnht.constant.PredefinedRole;
 import com.tawn.tawnht.dto.request.*;
 import com.tawn.tawnht.dto.response.AuthenticationResponse;
@@ -9,30 +25,16 @@ import com.tawn.tawnht.entity.Role;
 import com.tawn.tawnht.entity.User;
 import com.tawn.tawnht.exception.AppException;
 import com.tawn.tawnht.exception.ErrorCode;
+import com.tawn.tawnht.repository.httpClient.OutboundIdentityClient;
 import com.tawn.tawnht.repository.httpClient.OutboundUserClient;
 import com.tawn.tawnht.repository.jpa.InvalidatedTokenRepository;
-import com.tawn.tawnht.repository.httpClient.OutboundIdentityClient;
 import com.tawn.tawnht.repository.jpa.UserRepository;
-import com.nimbusds.jose.*;
-import com.nimbusds.jose.crypto.MACSigner;
-import com.nimbusds.jose.crypto.MACVerifier;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
+
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
-import org.springframework.util.CollectionUtils;
-
-import java.text.ParseException;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.*;
 
 @Service
 @RequiredArgsConstructor
@@ -43,20 +45,25 @@ public class AuthenticationService {
     InvalidatedTokenRepository invalidatedTokenRepository;
     OutboundIdentityClient outboundIdentityClient;
     OutboundUserClient outboundUserClient;
+
     @NonFinal
     @Value("${jwt.signerKey}")
     protected String signerKey;
+
     @NonFinal
     @Value("${client.id}")
-    protected  String CLIENT_ID ;
+    protected String CLIENT_ID;
+
     @NonFinal
     @Value("${client.secret}")
-    protected  String CLIENT_SECRET;
+    protected String CLIENT_SECRET;
+
     @NonFinal
     @Value("${client.redirect-uri}")
-    protected  String REDIRECT_URI;
+    protected String REDIRECT_URI;
+
     @NonFinal
-    protected  String GRAND_TYPE="authorization_code";
+    protected String GRAND_TYPE = "authorization_code";
 
     public IntrospectResponse introspect(IntrospectRequest request) throws JOSEException, ParseException {
         var token = request.getToken();
@@ -70,33 +77,34 @@ public class AuthenticationService {
 
         return IntrospectResponse.builder().valid(isValid).build();
     }
-    public AuthenticationResponse outboundAuthenticate(String code){
+
+    public AuthenticationResponse outboundAuthenticate(String code) {
         var response = outboundIdentityClient.exchangeToken(ExchangeTokenRequest.builder()
-                        .code(code)
-                        .clientId(CLIENT_ID)
-                        .clientSecret(CLIENT_SECRET)
-                        .grantType(GRAND_TYPE)
-                        .redirectUri(REDIRECT_URI)
+                .code(code)
+                .clientId(CLIENT_ID)
+                .clientSecret(CLIENT_SECRET)
+                .grantType(GRAND_TYPE)
+                .redirectUri(REDIRECT_URI)
                 .build());
         Set<Role> roles = new HashSet<>();
         roles.add(Role.builder().name(PredefinedRole.USER_ROLE).build());
-        var userInfo = outboundUserClient.getUserInfo("json",response.getAccessToken());
-        var user= userRepository.findByEmail(userInfo.getEmail()).orElseGet(
-                ()->userRepository.save(User.builder()
-                                .email(userInfo.getEmail())
-                                .password(UUID.randomUUID().toString())
-                                .firstName(userInfo.getGivenName())
-                                .lastName(userInfo.getFamilyName())
-                                .picture(userInfo.getPicture())
-                                .roles(roles)
-                        .build())
-        );
-        var token =generateToken(user);
+        var userInfo = outboundUserClient.getUserInfo("json", response.getAccessToken());
+        var user = userRepository
+                .findByEmail(userInfo.getEmail())
+                .orElseGet(() -> userRepository.save(User.builder()
+                        .email(userInfo.getEmail())
+                        .password(UUID.randomUUID().toString())
+                        .firstName(userInfo.getGivenName())
+                        .lastName(userInfo.getFamilyName())
+                        .picture(userInfo.getPicture())
+                        .roles(roles)
+                        .build()));
+        var token = generateToken(user);
         var refreshToken = generateRefreshToken(user);
-         return AuthenticationResponse.builder()
-                 .token(token.token)
-                 .refreshToken(refreshToken.token)
-                 .build();
+        return AuthenticationResponse.builder()
+                .token(token.token)
+                .refreshToken(refreshToken.token)
+                .build();
     }
 
     public AuthenticationResponse authenticate(AuthenticationRequest request) {
@@ -110,7 +118,7 @@ public class AuthenticationService {
         if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
 
         var token = generateToken(user);
-        var refreshToken=generateRefreshToken(user);
+        var refreshToken = generateRefreshToken(user);
 
         return AuthenticationResponse.builder()
                 .token(token.token)
@@ -133,25 +141,25 @@ public class AuthenticationService {
 
     public AuthenticationResponse refreshToken(RefreshRequest request) throws ParseException, JOSEException {
         var signedJWT = verifyToken(request.getToken());
-        var refreshJWT =verifyToken(request.getRefreshToken());
+        var refreshJWT = verifyToken(request.getRefreshToken());
         log.info("refresh");
         var jit = signedJWT.getJWTClaimsSet().getJWTID();
-        var jitt=refreshJWT.getJWTClaimsSet().getJWTID();
+        var jitt = refreshJWT.getJWTClaimsSet().getJWTID();
         var expiryTime = signedJWT.getJWTClaimsSet().getExpirationTime();
         var expiryTimeRefresh = refreshJWT.getJWTClaimsSet().getExpirationTime();
         InvalidatedToken invalidatedToken =
                 InvalidatedToken.builder().id(jit).expiryTime(expiryTime).build();
-        InvalidatedToken invalidatedToken1=InvalidatedToken.builder().id(jit).expiryTime(expiryTime).build();
+        InvalidatedToken invalidatedToken1 =
+                InvalidatedToken.builder().id(jit).expiryTime(expiryTime).build();
         invalidatedTokenRepository.save(invalidatedToken);
         invalidatedTokenRepository.save(invalidatedToken1);
 
         var email = signedJWT.getJWTClaimsSet().getSubject();
 
-        var user =
-                userRepository.findByEmail(email).orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
+        var user = userRepository.findByEmail(email).orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
 
         var token = generateToken(user);
-        var refreshToken=generateRefreshToken(user);
+        var refreshToken = generateRefreshToken(user);
 
         return AuthenticationResponse.builder()
                 .token(token.token)
@@ -189,6 +197,7 @@ public class AuthenticationService {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
     }
+
     private TokenInfo generateRefreshToken(User user) {
         JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
 

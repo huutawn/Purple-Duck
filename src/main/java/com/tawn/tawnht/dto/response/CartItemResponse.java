@@ -1,21 +1,11 @@
 package com.tawn.tawnht.dto.response;
 
-import com.tawn.tawnht.entity.Cart;
-import com.tawn.tawnht.entity.CartItem;
-import com.tawn.tawnht.entity.ProductVariant;
-import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.MapKeyJoinColumn;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Set;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 @Data
 @NoArgsConstructor
@@ -32,7 +22,7 @@ public class CartItemResponse {
     public static class VariantQuantity {
         private Long variantId; // ID của ProductVariant
         private String productName;
-        private Long productId;// Tên sản phẩm từ Product
+        private Long productId; // Tên sản phẩm từ Product
         private BigDecimal price; // Giá của biến thể
         private Integer stock; // Số lượng tồn kho
         private String image; // Link ảnh

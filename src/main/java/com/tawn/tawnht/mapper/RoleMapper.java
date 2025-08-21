@@ -1,10 +1,11 @@
 package com.tawn.tawnht.mapper;
 
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+
 import com.tawn.tawnht.dto.request.RoleRequest;
 import com.tawn.tawnht.dto.response.RoleResponse;
 import com.tawn.tawnht.entity.Role;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface RoleMapper {

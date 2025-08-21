@@ -1,10 +1,9 @@
 package com.tawn.tawnht.dto.request;
 
-import jakarta.persistence.Column;
+import java.util.List;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.util.List;
 
 @Data
 @NoArgsConstructor

@@ -1,6 +1,5 @@
 package com.tawn.tawnht.dto.request;
 
-import com.tawn.tawnht.entity.Order;
 import lombok.*;
 import lombok.experimental.FieldDefaults;
 

@@ -1,17 +1,14 @@
 package com.tawn.tawnht.dto.response;
 
-import com.tawn.tawnht.entity.OrderItem;
-import com.tawn.tawnht.entity.User;
-import com.tawn.tawnht.entity.UserAddress;
-import jakarta.persistence.*;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Set;
+
+import jakarta.persistence.*;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 @Data
 @NoArgsConstructor

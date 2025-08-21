@@ -2,8 +2,11 @@ server:
   port: 8080
   servlet:
     context-path: /api
+  shutdown: graceful
 
 spring:
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   elasticsearch:
     uris: http://localhost:9200
     username: elastic
@@ -20,7 +23,8 @@ spring:
           starttls:
             enable: true
   datasource:
-    url: jdbc:postgresql://localhost:5432/t5
+    url:  ${DBMS_CONNECT:jdbc:postgresql://localhost:5432/t3}
+
     username: postgres
     password: huutawn1412
   jpa:

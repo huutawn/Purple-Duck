@@ -1,16 +1,18 @@
 package com.tawn.tawnht.controller;
 
+import java.text.ParseException;
+
+import org.springframework.web.bind.annotation.*;
+
+import com.nimbusds.jose.JOSEException;
 import com.tawn.tawnht.dto.request.*;
 import com.tawn.tawnht.dto.response.AuthenticationResponse;
 import com.tawn.tawnht.dto.response.IntrospectResponse;
 import com.tawn.tawnht.service.AuthenticationService;
-import com.nimbusds.jose.JOSEException;
+
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-import org.springframework.web.bind.annotation.*;
-
-import java.text.ParseException;
 
 @RestController
 @RequestMapping("/auth")
@@ -18,8 +20,9 @@ import java.text.ParseException;
 @FieldDefaults(level = AccessLevel.PRIVATE, makeFinal = true)
 public class AuthenticationController {
     AuthenticationService authenticationService;
+
     @PostMapping("/outbound/authentication")
-    ApiResponse<AuthenticationResponse> outboundAuthenticate(@RequestParam("code")  String code){
+    ApiResponse<AuthenticationResponse> outboundAuthenticate(@RequestParam("code") String code) {
         var result = authenticationService.outboundAuthenticate(code);
         return ApiResponse.<AuthenticationResponse>builder().result(result).build();
     }

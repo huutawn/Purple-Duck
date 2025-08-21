@@ -1,18 +1,20 @@
 package com.tawn.tawnht.service;
 
+import java.util.HashSet;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
 import com.tawn.tawnht.dto.request.RoleRequest;
 import com.tawn.tawnht.dto.response.RoleResponse;
 import com.tawn.tawnht.mapper.RoleMapper;
 import com.tawn.tawnht.repository.jpa.PermissionRepository;
 import com.tawn.tawnht.repository.jpa.RoleRepository;
+
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
-
-import java.util.HashSet;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor

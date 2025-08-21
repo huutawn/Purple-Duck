@@ -1,8 +1,9 @@
 package com.tawn.tawnht.mapper;
 
+import org.mapstruct.Mapper;
+
 import com.tawn.tawnht.dto.response.SellerResponse;
 import com.tawn.tawnht.entity.Seller;
-import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")
 public interface SellerMapper {

@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Payment Example</title>
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1.5.2/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 40px; }
+        .payment-container { max-width: 600px; margin: 0 auto; }
+        .qr-code { text-align: center; margin: 20px 0; }
+        .qr-code img { max-width: 300px; border: 1px solid #ddd; padding: 10px; }
+        .status { padding: 20px; border-radius: 5px; margin: 20px 0; }
+        .status.paying { background-color: #fff3cd; border: 1px solid #ffeeba; }
+        .status.pending { background-color: #d1ecf1; border: 1px solid #bee5eb; }
+        .status.paid { background-color: #d4edda; border: 1px solid #c3e6cb; }
+        .button { background-color: #007bff; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; }
+        .button:hover { background-color: #0056b3; }
+        .hidden { display: none; }
+        .log { background-color: #f8f9fa; padding: 15px; border-radius: 5px; margin-top: 20px; height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <div class="payment-container">
+        <h1>QR Payment Integration Example</h1>
+        
+        <div id="orderSetup">
+            <h3>Simulate QR Payment Order</h3>
+            <input type="text" id="userId" placeholder="User ID" value="123">
+            <input type="text" id="orderId" placeholder="Order ID" value="456">
+            <input type="text" id="qrCode" placeholder="QR Code" value="ABC12345">
+            <button class="button" onclick="startPayment()">Start QR Payment</button>
+        </div>
+        
+        <div id="paymentSection" class="hidden">
+            <div class="status paying" id="statusDisplay">
+                <h3>Payment Status: <span id="statusText">Waiting for payment...</span></h3>
+                <p id="statusMessage">Please scan the QR code below to complete your payment</p>
+            </div>
+            
+            <div class="qr-code">
+                <img id="qrImage" src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4gPHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IiNmOWY5ZjkiLz4gPHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtZmFtaWx5PSJBcmlhbCIgZm9udC1zaXplPSIxNiIgZmlsbD0iIzMzMyIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZHk9Ii4zZW0iPiBRUiBDb2RlIFBsYWNlaG9sZGVyIDwvdGV4dD4gPC9zdmc+" alt="QR Code">
+                <p>Scan this QR code with your banking app</p>
+            </div>
+            
+            <button class="button" onclick="simulatePayment()">Simulate Payment Success</button>
+            <button class="button" onclick="cancelPayment()">Cancel Payment</button>
+        </div>
+        
+        <div class="log">
+            <h4>WebSocket Connection Log:</h4>
+            <div id="logMessages"></div>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let currentUserId = null;
+        let currentOrderId = null;
+
+        // Connect to WebSocket when page loads
+        window.onload = function() {
+            connect();
+        };
+
+        function connect() {
+            const socket = new SockJS('/ws');
+            stompClient = Stomp.over(socket);
+            
+            stompClient.connect({}, function (frame) {
+                log('Connected: ' + frame);
+                
+                // Subscribe to general order status updates
+                stompClient.subscribe('/topic/order-status', function (message) {
+                    const orderUpdate = JSON.parse(message.body);
+                    log('General order status update: ' + JSON.stringify(orderUpdate, null, 2));
+                });
+            }, function(error) {
+                log('Connection error: ' + error);
+            });
+        }
+
+        function subscribeToUserUpdates(userId) {
+            if (stompClient && stompClient.connected) {
+                stompClient.subscribe('/topic/order-status/' + userId, function (message) {
+                    const orderUpdate = JSON.parse(message.body);
+                    log('User-specific update: ' + JSON.stringify(orderUpdate, null, 2));
+                    handleOrderStatusUpdate(orderUpdate);
+                });
+                log('Subscribed to user updates for userId: ' + userId);
+            }
+        }
+
+        function startPayment() {
+            const userId = document.getElementById('userId').value;
+            const orderId = document.getElementById('orderId').value;
+            const qrCode = document.getElementById('qrCode').value;
+            
+            if (!userId || !orderId || !qrCode) {
+                alert('Please fill in all fields');
+                return;
+            }
+            
+            currentUserId = userId;
+            currentOrderId = orderId;
+            
+            // Subscribe to user-specific updates
+            subscribeToUserUpdates(userId);
+            
+            // Show payment section
+            document.getElementById('orderSetup').classList.add('hidden');
+            document.getElementById('paymentSection').classList.remove('hidden');
+            
+            // Set initial status
+            updatePaymentStatus('paying', 'Waiting for payment...', 'Please scan the QR code below to complete your payment');
+            
+            log('Started QR payment for Order: ' + orderId + ', User: ' + userId);
+        }
+
+        function simulatePayment() {
+            if (!currentUserId || !currentOrderId) {
+                alert('Please start a payment first');
+                return;
+            }
+            
+            // Simulate receiving a WebSocket message for payment completion
+            const mockUpdate = {
+                orderId: currentOrderId,
+                qrCode: document.getElementById('qrCode').value,
+                status: 'pending',
+                message: 'Payment received. Order is now being processed.',
+                timestamp: new Date().toISOString(),
+                userId: currentUserId
+            };
+            
+            handleOrderStatusUpdate(mockUpdate);
+            log('Simulated payment success');
+        }
+
+        function cancelPayment() {
+            // Reset the demo
+            document.getElementById('orderSetup').classList.remove('hidden');
+            document.getElementById('paymentSection').classList.add('hidden');
+            
+            currentUserId = null;
+            currentOrderId = null;
+            
+            log('Payment cancelled');
+        }
+
+        function handleOrderStatusUpdate(orderUpdate) {
+            const { status, message } = orderUpdate;
+            
+            updatePaymentStatus(status, status.charAt(0).toUpperCase() + status.slice(1), message);
+            
+            // If payment is successful, redirect to success page after a delay
+            if (status === 'pending' || status === 'paid') {
+                setTimeout(() => {
+                    if (confirm('Payment successful! Redirect to payment success page?')) {
+                        alert('Redirecting to payment success page...');
+                        // In a real application, you would use: window.location.href = '/payment-success';
+                        cancelPayment(); // For demo purposes, reset the form
+                    }
+                }, 2000);
+            }
+        }
+
+        function updatePaymentStatus(statusClass, statusText, message) {
+            const statusDisplay = document.getElementById('statusDisplay');
+            const statusTextElement = document.getElementById('statusText');
+            const statusMessageElement = document.getElementById('statusMessage');
+            
+            // Remove all status classes
+            statusDisplay.className = 'status ' + statusClass;
+            statusTextElement.textContent = statusText;
+            statusMessageElement.textContent = message;
+        }
+
+        function log(message) {
+            const logMessages = document.getElementById('logMessages');
+            const timestamp = new Date().toLocaleTimeString();
+            logMessages.innerHTML += '<div>[' + timestamp + '] ' + message + '</div>';
+            logMessages.scrollTop = logMessages.scrollHeight;
+        }
+    </script>
+</body>
+</html>

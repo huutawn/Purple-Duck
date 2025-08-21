@@ -1,18 +1,21 @@
 package com.tawn.tawnht.controller;
 
+import java.util.List;
+
+import jakarta.validation.Valid;
+
+import org.springframework.web.bind.annotation.*;
+
 import com.tawn.tawnht.dto.request.ApiResponse;
 import com.tawn.tawnht.dto.request.UserCreationRequest;
 import com.tawn.tawnht.dto.request.UserUpdateRequest;
 import com.tawn.tawnht.dto.response.UserResponse;
 import com.tawn.tawnht.service.UserService;
-import jakarta.validation.Valid;
+
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/users")
@@ -35,8 +38,9 @@ public class UserController {
                 .result(userService.getUsers())
                 .build();
     }
+
     @PatchMapping
-    ApiResponse<UserResponse> verifyUser(@RequestParam("token") String token){
+    ApiResponse<UserResponse> verifyUser(@RequestParam("token") String token) {
         return ApiResponse.<UserResponse>builder()
                 .result(userService.verifyUser(token))
                 .build();

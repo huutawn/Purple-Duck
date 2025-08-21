@@ -1,24 +1,23 @@
 package com.tawn.tawnht.configuration;
 
+import java.util.HashSet;
+
+import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import com.tawn.tawnht.constant.PredefinedRole;
 import com.tawn.tawnht.entity.Role;
-
+import com.tawn.tawnht.entity.User;
 import com.tawn.tawnht.repository.jpa.RoleRepository;
 import com.tawn.tawnht.repository.jpa.UserRepository;
-import com.tawn.tawnht.entity.User;
+
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.experimental.NonFinal;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.ApplicationRunner;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.security.crypto.password.PasswordEncoder;
-
-import java.math.BigDecimal;
-import java.util.HashSet;
 
 @Configuration
 @RequiredArgsConstructor
@@ -35,10 +34,7 @@ public class ApplicationInitConfig {
     static final String ADMIN_PASSWORD = "admin";
 
     @Bean
-    ApplicationRunner applicationRunner(
-            UserRepository userRepository,
-            RoleRepository roleRepository
-            ) {
+    ApplicationRunner applicationRunner(UserRepository userRepository, RoleRepository roleRepository) {
         return args -> {
             if (userRepository.findByEmail(ADMIN_USER_NAME).isEmpty()) {
                 roleRepository.save(Role.builder()
@@ -68,16 +64,14 @@ public class ApplicationInitConfig {
                 userRepository.save(user);
                 userRepository.save(user1);
 
-
                 log.warn("admin user has been created with default password: admin, please change the password");
             }
-            if(!roleRepository.existsByName(PredefinedRole.SELLER_ROLE)){
+            if (!roleRepository.existsByName(PredefinedRole.SELLER_ROLE)) {
                 roleRepository.save(Role.builder()
                         .name(PredefinedRole.SELLER_ROLE)
                         .description("Seller role")
                         .build());
             }
-
         };
     }
 }

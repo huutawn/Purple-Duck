@@ -1,11 +1,12 @@
 package com.tawn.tawnht.entity;
 
-import jakarta.persistence.*;
-import lombok.*;
-import lombok.experimental.FieldDefaults;
-
 import java.time.LocalDateTime;
 import java.util.Set;
+
+import jakarta.persistence.*;
+
+import lombok.*;
+import lombok.experimental.FieldDefaults;
 
 @Getter
 @Setter
@@ -17,12 +18,15 @@ import java.util.Set;
 @Table(name = "user_address")
 public class UserAddress {
     @Id
-            @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
+
     @ManyToOne
     User user;
-    @OneToMany(mappedBy = "userAddress",fetch = FetchType.LAZY)
+
+    @OneToMany(mappedBy = "userAddress", fetch = FetchType.LAZY)
     Set<Order> orders;
+
     String city;
     String district;
     String commune;

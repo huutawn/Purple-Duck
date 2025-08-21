@@ -1,22 +1,24 @@
 package com.tawn.tawnht.mapper;
 
+import java.math.BigDecimal;
+import java.util.stream.Collectors;
+
+import org.springframework.stereotype.Component;
+
 import com.tawn.tawnht.dto.response.*;
 import com.tawn.tawnht.entity.*;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
 @Component
 @Slf4j
 public class OrderMapper {
-    public OrderResponse toOrderResponse(Order order){
-        OrderResponse orderResponse=OrderResponse.builder()
+    public OrderResponse toOrderResponse(Order order) {
+        OrderResponse orderResponse = OrderResponse.builder()
                 .orderId(order.getId())
-                .subOrders(order.getSubOrders().stream().map(this::toSubOrderResponse).collect(Collectors.toList()))
+                .subOrders(order.getSubOrders().stream()
+                        .map(this::toSubOrderResponse)
+                        .collect(Collectors.toList()))
                 .note(order.getNote())
                 .couponCode(order.getCouponCode())
                 .status(order.getStatus())
@@ -28,6 +30,7 @@ public class OrderMapper {
                 .shippingCarrier(order.getShippingCarrier())
                 .shippingFee(order.getShippingFee())
                 .taxAmount(order.getTaxAmount())
+
                 .totalAmount(order.getTotalAmount())
                 .trackingNumber(order.getTrackingNumber())
                 .userAddress(toUserAddressResponse(order.getUserAddress()))
@@ -37,8 +40,8 @@ public class OrderMapper {
         return orderResponse;
     }
 
-    public UserAddressResponse toUserAddressResponse(UserAddress userAddress){
-        UserAddressResponse userAddressResponse=UserAddressResponse.builder()
+    public UserAddressResponse toUserAddressResponse(UserAddress userAddress) {
+        UserAddressResponse userAddressResponse = UserAddressResponse.builder()
                 .id(userAddress.getId())
                 .address(userAddress.getAddress())
                 .userId(userAddress.getUser().getId())
@@ -53,11 +56,14 @@ public class OrderMapper {
                 .build();
         return userAddressResponse;
     }
-    public SubOrderResponse toSubOrderResponse(SubOrder subOrder){
-        SubOrderResponse subOrderResponse=SubOrderResponse.builder()
+
+    public SubOrderResponse toSubOrderResponse(SubOrder subOrder) {
+        SubOrderResponse subOrderResponse = SubOrderResponse.builder()
                 .orderId(subOrder.getOrder().getId())
                 .subOrderId(subOrder.getId())
-                .orderItems(subOrder.getOrderItems().stream().map(this::toOrderItemResponse).collect(Collectors.toList()))
+                .orderItems(subOrder.getOrderItems().stream()
+                        .map(this::toOrderItemResponse)
+                        .collect(Collectors.toList()))
                 .subTotal(subOrder.getSubTotal())
                 .address(toUserAddressResponse(subOrder.getOrder().getUserAddress()))
                 .status(subOrder.getStatus())
@@ -65,6 +71,7 @@ public class OrderMapper {
                 .build();
         return subOrderResponse;
     }
+
     public OrderItemResponse toOrderItemResponse(OrderItem orderItem) {
         OrderItemResponse response = new OrderItemResponse();
         response.setId(orderItem.getId());
@@ -92,9 +99,10 @@ public class OrderMapper {
 
     private AttributeResponse toAttributeResponse(ProductVariantAttribute attr) {
         AttributeResponse response = new AttributeResponse();
-        response.setAttributeId(attr.getProductAttributeValue().getProductAttribute().getId());
-        response.setAttributeName(attr.getProductAttributeValue().getProductAttribute().getDisplayName());
+        response.setAttributeId(
+                attr.getProductAttributeValue().getProductAttribute().getId());
+        response.setAttributeName(
+                attr.getProductAttributeValue().getProductAttribute().getDisplayName());
         return response;
     }
-
 }

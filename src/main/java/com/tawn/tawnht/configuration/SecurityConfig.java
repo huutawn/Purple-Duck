@@ -2,7 +2,6 @@ package com.tawn.tawnht.configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -22,12 +21,20 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private static final String[] PUBLIC_ENDPOINTS = {
-        "/users", "/auth/token", "/auth/introspect", "/auth/logout", "/auth/refresh","/category","/products","/v3/api-docs/**","v3/api/docs",
-            "/swagger-ui/**",
-            "/swagger-ui.html",
-            "/products/**",
-            "/auth/outbound/authentication",
-            "/products/search"
+        "/users",
+        "/auth/token",
+        "/auth/introspect",
+        "/auth/logout",
+        "/auth/refresh",
+        "/category",
+        "/products",
+        "/v3/api-docs/**",
+        "v3/api/docs",
+        "/swagger-ui/**",
+        "/swagger-ui.html",
+        "/products/**",
+        "/auth/outbound/authentication",
+        "/products/search"
     };
 
     private final CustomJwtDecoder customJwtDecoder;
@@ -43,7 +50,6 @@ public class SecurityConfig {
                 .anyRequest()
                 .authenticated());
 
-
         httpSecurity.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwtConfigurer -> jwtConfigurer
                         .decoder(customJwtDecoder)
                         .jwtAuthenticationConverter(jwtAuthenticationConverter()))
@@ -52,6 +58,7 @@ public class SecurityConfig {
         httpSecurity.cors(cors -> cors.configurationSource(corsConfigurationSource()));
         return httpSecurity.build();
     }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration corsConfiguration = new CorsConfiguration();
@@ -63,6 +70,7 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", corsConfiguration);
         return source;
     }
+
     @Bean
     JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter = new JwtGrantedAuthoritiesConverter();
