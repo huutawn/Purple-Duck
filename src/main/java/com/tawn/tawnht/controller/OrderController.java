@@ -1,9 +1,11 @@
 package com.tawn.tawnht.controller;
 
-import com.google.zxing.WriterException;
+import java.io.IOException;
+
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.web.bind.annotation.*;
 
+import com.google.zxing.WriterException;
 import com.tawn.tawnht.dto.request.*;
 import com.tawn.tawnht.dto.response.OrderResponse;
 import com.tawn.tawnht.dto.response.PageResponse;
@@ -15,8 +17,6 @@ import com.turkraft.springfilter.boot.Filter;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
-
-import java.io.IOException;
 
 @RestController
 @RequestMapping("/order")
@@ -86,8 +86,9 @@ public class OrderController {
                 .result(orderService.setStatus(req))
                 .build();
     }
+
     @GetMapping("/qr")
-    ApiResponse<String> getQr(@RequestParam(value = "qrCode")String qrCode) throws IOException, WriterException {
+    ApiResponse<String> getQr(@RequestParam(value = "qrCode") String qrCode) throws IOException, WriterException {
         return ApiResponse.<String>builder()
                 .result(orderService.generateOrderQr(qrCode))
                 .build();

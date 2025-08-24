@@ -1,11 +1,11 @@
 package com.tawn.tawnht.entity;
 
+import java.math.BigDecimal;
+
 import jakarta.persistence.*;
+
 import lombok.*;
 import lombok.experimental.FieldDefaults;
-
-import java.math.BigDecimal;
-import java.util.Set;
 
 @Getter
 @Setter
@@ -19,6 +19,7 @@ public class Transaction {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     Long id;
+
     String userId;
     String userName;
     String content;

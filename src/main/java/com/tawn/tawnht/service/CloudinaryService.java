@@ -1,8 +1,6 @@
 package com.tawn.tawnht.service;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -40,6 +38,7 @@ public class CloudinaryService {
         String url = (String) uploadResult.get("url");
         return url;
     }
+
     public String uploadFile(byte[] fileBytes, String relatedName, String relatedId) throws IOException {
         String fileName = relatedName + "_" + relatedId + "_" + System.currentTimeMillis();
 
@@ -48,7 +47,9 @@ public class CloudinaryService {
 
         Map uploadResult = cloudinary
                 .uploader()
-                .upload(fileBytes, ObjectUtils.asMap("public_id", fileName, "folder", "hope")); // <-- Sử dụng fileBytes trực tiếp
+                .upload(
+                        fileBytes,
+                        ObjectUtils.asMap("public_id", fileName, "folder", "hope")); // <-- Sử dụng fileBytes trực tiếp
 
         String url = (String) uploadResult.get("url");
         return url;

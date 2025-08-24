@@ -1,13 +1,9 @@
 package com.tawn.tawnht.repository.jpa;
 
-import com.tawn.tawnht.entity.CartItem;
-import com.tawn.tawnht.entity.Transaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.util.List;
+import com.tawn.tawnht.entity.Transaction;
 
 @Repository
-public interface TransactionRepository extends JpaRepository<Transaction, Long> {
-
-}
+public interface TransactionRepository extends JpaRepository<Transaction, Long> {}

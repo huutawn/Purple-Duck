@@ -30,7 +30,6 @@ public class OrderMapper {
                 .shippingCarrier(order.getShippingCarrier())
                 .shippingFee(order.getShippingFee())
                 .taxAmount(order.getTaxAmount())
-
                 .totalAmount(order.getTotalAmount())
                 .trackingNumber(order.getTrackingNumber())
                 .userAddress(toUserAddressResponse(order.getUserAddress()))

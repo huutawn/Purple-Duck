@@ -1,14 +1,11 @@
 package com.tawn.tawnht.service;
 
-import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import com.google.zxing.WriterException;
-import com.tawn.tawnht.utils.CodeUtil;
 import jakarta.transaction.Transactional;
 
 import org.springframework.data.domain.Page;
@@ -19,6 +16,7 @@ import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
+import com.google.zxing.WriterException;
 import com.tawn.tawnht.document.ProductDocument;
 import com.tawn.tawnht.document.ProductElasticsearchRepository;
 import com.tawn.tawnht.dto.request.OrderCreationRequest;
@@ -33,6 +31,7 @@ import com.tawn.tawnht.exception.AppException;
 import com.tawn.tawnht.exception.ErrorCode;
 import com.tawn.tawnht.mapper.OrderMapper;
 import com.tawn.tawnht.repository.jpa.*;
+import com.tawn.tawnht.utils.CodeUtil;
 import com.tawn.tawnht.utils.SecurityUtils;
 
 import lombok.AccessLevel;
@@ -61,6 +60,7 @@ public class OrderService {
     OrderMapper orderMapper;
     ProductElasticsearchRepository productElasticsearchRepository;
     QRService qrService;
+    OrderWebSocketService orderWebSocketService;
 
     public OrderResponse createOrder(OrderCreationRequest request) {
         String email = SecurityUtils.getCurrentUserLogin().get();
@@ -154,6 +154,14 @@ public class OrderService {
             }
             subOrder.setOrderItems(orderItems);
             subOrders.add(subOrder);
+
+            // Send WebSocket notification to seller about new order
+            try {
+                orderWebSocketService.sendNewOrderToSeller(subOrder, sellerId);
+            } catch (Exception e) {
+                log.error("Failed to send WebSocket notification for new order", e);
+                // Continue processing even if WebSocket notification fails
+            }
         }
         order.setSubOrders(subOrders);
 
@@ -352,21 +360,11 @@ public class OrderService {
                 .findById(req.getAddressId())
                 .orElseThrow(() -> new AppException(ErrorCode.ADDRESS_NOT_FOUND));
         order.setUserAddress(userAddress);
-        String qrCode = CodeUtil.generateCode(8);
-        order.setQRCode(qrCode);
+
         if (req.getIsQR()) {
+            String qrCode = CodeUtil.generateCode(8);
+            order.setQRCode(qrCode);
             order.setStatus("paying");
-            // Generate QR code image and get Cloudinary URL
-            try {
-                String qrImageUrl = generateOrderQr(order, qrCode);
-                // Store the QR image URL in the Order entity - we'll use the same QRCode field
-                // but now it will contain the Cloudinary URL instead of just the code
-                order.setQRCode(qrImageUrl);
-                log.info("QR Code image generated and uploaded: {}", qrImageUrl);
-            } catch (Exception e) {
-                log.error("Failed to generate QR code image for order {}: {}", order.getId(), e.getMessage());
-                // Keep the original QR code if image generation fails
-            }
         }
         order.setNote(req.getNote());
         order.setSubOrders(subOrders);
@@ -396,18 +394,31 @@ public class OrderService {
                 .findById(req.getSubOrderId())
                 .orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
         subOrder.setStatus(req.getStatus());
-        return orderMapper.toSubOrderResponse(subOrderRepository.save(subOrder));
+        SubOrder savedSubOrder = subOrderRepository.save(subOrder);
+
+        // Send WebSocket notification to seller about order status update
+        try {
+            Long sellerId = savedSubOrder.getSeller().getId();
+            orderWebSocketService.sendOrderStatusUpdate(savedSubOrder, sellerId);
+        } catch (Exception e) {
+            log.error("Failed to send WebSocket notification for order status update", e);
+            // Continue processing even if WebSocket notification fails
+        }
+
+        return orderMapper.toSubOrderResponse(savedSubOrder);
     }
+
     public String generateOrderQr(String orderCode) throws IOException, WriterException {
-        Order order=orderRepository.findByQRCode(orderCode)
-                .orElseThrow(()->new AppException(ErrorCode.ORDER_NOT_FOUND));
-       var fileByte=qrService.generateBankQrFile(order.getTotalAmount()+"",order.getCode(),orderCode);
-       return cloudinaryService.uploadFile(fileByte,orderCode,orderCode);
+        Order order =
+                orderRepository.findByQRCode(orderCode).orElseThrow(() -> new AppException(ErrorCode.ORDER_NOT_FOUND));
+        var fileByte = qrService.generateBankQrFile(order.getTotalAmount() + "", order.getQRCode(), orderCode);
+        return cloudinaryService.uploadFile(fileByte, orderCode, orderCode);
     }
-    
+
     // Overloaded method for generating QR with order and QR code separately
     public String generateOrderQr(Order order, String qrCode) throws IOException, WriterException {
-       var fileByte=qrService.generateBankQrFile(order.getTotalAmount()+"",order.getCode(),qrCode);
-       return cloudinaryService.uploadFile(fileByte,qrCode,qrCode);
+        var fileByte = qrService.generateBankQrFile(
+                order.getTotalAmount() + "", "Payment for Order #" + order.getId(), qrCode);
+        return cloudinaryService.uploadFile(fileByte, qrCode, qrCode);
     }
 }

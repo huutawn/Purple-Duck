@@ -8,7 +8,7 @@ spring:
   lifecycle:
     timeout-per-shutdown-phase: 30s
   elasticsearch:
-    uris: http://localhost:9200
+    uris: ${ELASTIC_CONNECT:http://localhost:9200}
     username: elastic
     password: huutanelastic1412
   mail:

@@ -15,5 +15,6 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
     Optional<Order> findFirstByUserAndStatusOrderByCreatedAtDesc(User user, String status);
 
     Page<Order> findAllByUser(User user, Pageable pageable);
+
     Optional<Order> findByQRCode(String code);
 }

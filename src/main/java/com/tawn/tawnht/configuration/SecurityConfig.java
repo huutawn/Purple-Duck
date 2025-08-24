@@ -33,8 +33,10 @@ public class SecurityConfig {
         "/swagger-ui/**",
         "/swagger-ui.html",
         "/products/**",
+        "/cloudinary/**",
         "/auth/outbound/authentication",
-        "/products/search"
+        "/products/search",
+        "hooks/**"
     };
 
     private final CustomJwtDecoder customJwtDecoder;
@@ -67,7 +69,7 @@ public class SecurityConfig {
         corsConfiguration.addAllowedHeader("*"); // Cho phép tất cả header
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfiguration);
+        source.registerCorsConfiguration("/api/**", corsConfiguration);
         return source;
     }
 

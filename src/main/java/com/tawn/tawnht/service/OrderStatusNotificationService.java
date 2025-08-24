@@ -1,14 +1,16 @@
 package com.tawn.tawnht.service;
 
+import java.time.LocalDateTime;
+
+import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.stereotype.Service;
+
 import com.tawn.tawnht.dto.response.OrderStatusMessage;
+
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.FieldDefaults;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.stereotype.Service;
-
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -20,7 +22,7 @@ public class OrderStatusNotificationService {
 
     public void sendOrderStatusUpdate(Long orderId, String qrCode, String status, String message, String userId) {
         log.info("Sending order status update: orderId={}, status={}, userId={}", orderId, status, userId);
-        
+
         OrderStatusMessage statusMessage = OrderStatusMessage.builder()
                 .orderId(orderId)
                 .qrCode(qrCode)
@@ -32,30 +34,19 @@ public class OrderStatusNotificationService {
 
         // Send to specific user channel
         messagingTemplate.convertAndSend("/topic/order-status/" + userId, statusMessage);
-        
+
         // Send to general order status channel (optional, for admin monitoring)
         messagingTemplate.convertAndSend("/topic/order-status", statusMessage);
-        
+
         log.info("Order status notification sent successfully");
     }
 
     public void sendPaymentSuccess(Long orderId, String qrCode, String userId) {
         sendOrderStatusUpdate(
-            orderId, 
-            qrCode, 
-            "paid", 
-            "Payment completed successfully. Redirecting to success page...", 
-            userId
-        );
+                orderId, qrCode, "paid", "Payment completed successfully. Redirecting to success page...", userId);
     }
 
     public void sendPaymentPending(Long orderId, String qrCode, String userId) {
-        sendOrderStatusUpdate(
-            orderId, 
-            qrCode, 
-            "pending", 
-            "Payment received. Order is now being processed.", 
-            userId
-        );
+        sendOrderStatusUpdate(orderId, qrCode, "pending", "Payment received. Order is now being processed.", userId);
     }
 }

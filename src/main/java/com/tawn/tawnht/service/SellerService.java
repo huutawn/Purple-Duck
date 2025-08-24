@@ -1,13 +1,18 @@
 package com.tawn.tawnht.service;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.UUID;
+
+import jakarta.persistence.EntityManager;
 
 import org.springframework.stereotype.Service;
 
 import com.tawn.tawnht.constant.PredefinedRole;
 import com.tawn.tawnht.dto.request.SellerCreationRequest;
+import com.tawn.tawnht.dto.response.SellerProfileResponse;
 import com.tawn.tawnht.dto.response.SellerResponse;
 import com.tawn.tawnht.entity.Role;
 import com.tawn.tawnht.entity.Seller;
@@ -15,8 +20,10 @@ import com.tawn.tawnht.entity.User;
 import com.tawn.tawnht.exception.AppException;
 import com.tawn.tawnht.exception.ErrorCode;
 import com.tawn.tawnht.mapper.SellerMapper;
+import com.tawn.tawnht.repository.jpa.ProductRepository;
 import com.tawn.tawnht.repository.jpa.RoleRepository;
 import com.tawn.tawnht.repository.jpa.SellerRepository;
+import com.tawn.tawnht.repository.jpa.SubOrderRepository;
 import com.tawn.tawnht.repository.jpa.UserRepository;
 import com.tawn.tawnht.utils.SecurityUtils;
 
@@ -36,6 +43,9 @@ public class SellerService {
     UserRepository userRepository;
     SellerMapper sellerMapper;
     RoleRepository roleRepository;
+    SubOrderRepository subOrderRepository;
+    ProductRepository productRepository;
+    EntityManager entityManager;
 
     public void requestVerify(String email, String token) {
         String htmlMail = "<!DOCTYPE html>\n" + "<html>\n"
@@ -116,7 +126,7 @@ public class SellerService {
         seller = sellerRepository.save(seller);
         user.setSeller(seller);
         userRepository.save(user);
-        requestVerify(email, seller.getVerifyToken());
+        //        requestVerify(email, seller.getVerifyToken());
         return sellerMapper.toSellerResponse(seller);
     }
 
@@ -127,6 +137,91 @@ public class SellerService {
         seller.setIsVerified(true);
         sellerRepository.save(seller);
         return sellerMapper.toSellerResponse(seller);
+    }
+
+    public SellerProfileResponse getSellerProfile() {
+        // Get current user
+        String email =
+                SecurityUtils.getCurrentUserLogin().orElseThrow(() -> new AppException(ErrorCode.UNAUTHENTICATED));
+
+        User currentUser =
+                userRepository.findByEmail(email).orElseThrow(() -> new AppException(ErrorCode.USER_NOT_EXISTED));
+
+        Seller seller = currentUser.getSeller();
+        if (seller == null) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
+
+        // Get order statistics using native query
+        String orderStatsQuery = "SELECT " + "COUNT(DISTINCT so.id) as total_orders, "
+                + "COUNT(CASE WHEN so.status IN ('pending', 'init', 'processing') THEN 1 END) as pending_orders, "
+                + "COUNT(CASE WHEN so.status IN ('completed', 'delivered') THEN 1 END) as completed_orders, "
+                + "COALESCE(SUM(CASE WHEN so.status IN ('completed', 'delivered') THEN so.sub_total ELSE 0 END), 0) as total_revenue, "
+                + "COALESCE(SUM(CASE WHEN so.status IN ('completed', 'delivered') AND so.created_at >= :monthStart THEN so.sub_total ELSE 0 END), 0) as monthly_revenue "
+                + "FROM sub_order so "
+                + "WHERE so.seller_id = :sellerId";
+
+        LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        Object[] orderStats = (Object[]) entityManager
+                .createNativeQuery(orderStatsQuery)
+                .setParameter("sellerId", seller.getId())
+                .setParameter("monthStart", monthStart)
+                .getSingleResult();
+
+        Long totalOrders = ((Number) orderStats[0]).longValue();
+        Long pendingOrders = ((Number) orderStats[1]).longValue();
+        Long completedOrders = ((Number) orderStats[2]).longValue();
+        BigDecimal totalRevenue = new BigDecimal(orderStats[3].toString());
+        BigDecimal monthlyRevenue = new BigDecimal(orderStats[4].toString());
+
+        // Get product statistics
+        String productStatsQuery = "SELECT " + "COUNT(*) as total_products, "
+                + "COUNT(CASE WHEN p.active = true THEN 1 END) as active_products "
+                + "FROM product p "
+                + "WHERE p.seller_id = :sellerId";
+
+        Object[] productStats = (Object[]) entityManager
+                .createNativeQuery(productStatsQuery)
+                .setParameter("sellerId", seller.getId())
+                .getSingleResult();
+
+        Long totalProducts = ((Number) productStats[0]).longValue();
+        Long activeProducts = ((Number) productStats[1]).longValue();
+
+        // Get customer count
+        String customerCountQuery = "SELECT COUNT(DISTINCT o.user_id) " + "FROM orders o "
+                + "INNER JOIN sub_order so ON o.id = so.order_id "
+                + "WHERE so.seller_id = :sellerId";
+
+        Long totalCustomers = ((Number) entityManager
+                        .createNativeQuery(customerCountQuery)
+                        .setParameter("sellerId", seller.getId())
+                        .getSingleResult())
+                .longValue();
+
+        return SellerProfileResponse.builder()
+                .sellerId(seller.getId())
+                .storeName(seller.getStoreName())
+                .storeDescription(seller.getStoreDescription())
+                .storeLogo(seller.getStoreLogo())
+                .rating(seller.getRating())
+                .isVerified(seller.getIsVerified())
+                .sellerCreatedAt(seller.getCreatedAt())
+                .userId(currentUser.getId())
+                .firstName(currentUser.getFirstName())
+                .lastName(currentUser.getLastName())
+                .email(currentUser.getEmail())
+                .picture(currentUser.getPicture())
+                .totalOrders(totalOrders)
+                .pendingOrders(pendingOrders)
+                .completedOrders(completedOrders)
+                .totalRevenue(totalRevenue)
+                .monthlyRevenue(monthlyRevenue)
+                .totalProducts(totalProducts)
+                .activeProducts(activeProducts)
+                .totalCustomers(totalCustomers)
+                .unreadNotifications(0) // TODO: Implement notifications
+                .build();
     }
 
     private String createToken() {

@@ -59,8 +59,7 @@ public class AuthenticationService {
     protected String CLIENT_SECRET;
 
     @NonFinal
-    @Value("${client.redirect-uri}")
-    protected String REDIRECT_URI;
+    protected String REDIRECT_URI = "https://purpleduck.io.vn/authenticate";
 
     @NonFinal
     protected String GRAND_TYPE = "authorization_code";

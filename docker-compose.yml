@@ -28,6 +28,7 @@ services:
     environment:
       - discovery.type=single-node
       - xpack.security.enabled=true
+      - path.repo=/usr/share/elasticsearch/snapshots
       - ELASTIC_PASSWORD=huutanelastic1412 # Password cho user 'elastic'
       - ES_JAVA_OPTS=-Xms512m -Xmx512m
     ports:
@@ -35,6 +36,7 @@ services:
       - "9300:9300"
     volumes:
       - es_data:/usr/share/elasticsearch/data
+      - D:\deploy\es_snapshots:/usr/share/elasticsearch/snapshots
     ulimits:
       memlock:
         soft: -1
